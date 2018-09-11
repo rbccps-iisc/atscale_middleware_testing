@@ -1,3 +1,4 @@
+
 from __future__ import print_function 
 import requests
 import json
@@ -18,52 +19,52 @@ base_url = "https://"+IP_address+":8443/api/"+api
 
 
 # Registration
-def register(entity_id):
-    """ Register an entity with the given entity_id
+def register(self_id):
+    """ Register an entity with the given self_id
     and return (True, <apikey>) if registration succeeds 
     else return (False, 0)."""
     
     register_url = base_url+ "/register"
     register_headers = {'apikey': 'guest', 'content-type':'application/json'}
-    response = requests.post(url=register_url, headers=register_headers, data=streetlight_schema.get_data_from_schema(entity_id), verify=False)
+    response = requests.post(url=register_url, headers=register_headers, data=streetlight_schema.get_data_from_schema(self_id), verify=False)
     r = response.json()
     s = response.status_code
     if( s == 200 and r["Registration"] == "success"):
             return True, r["apiKey"]
     else:
-            print ("ERROR: Registration failed for entity",entity_id,"with response",response.text)
+            print ("ERROR: Registration failed for entity",self_id,"with response",response.text)
             return False, 0
 
 
 # De-registration
-def deregister(entity_id):
-    """ De-register an entity with the given entity_id
+def deregister(self_id):
+    """ De-register an entity with the given self_id
     and return True if de-registration succeeds else return False."""
     
     deregister_url = base_url+ "/register"
     deregister_headers = {'apikey': 'guest'}
-    d = {"id":str(entity_id)}
+    d = {"id":str(self_id)}
     response = requests.delete(url=deregister_url, headers=deregister_headers, data = json.dumps(d), verify=False)
     r = response.json()
     s = response.status_code
     if( s == 200 and r["De-Registration"] == "success"):
             return True
     else:
-            print ("ERROR: De-registration failed for entity",entity_id,"with response",response.text)
+            print ("ERROR: De-registration failed for entity",self_id,"with response",response.text)
             return False
 
 # Publish
-def publish(entity_id, apikey, data, stream):
+def publish(self_id, apikey, data, stream):
     """ Publish data from a given entity"""
     
-    publish_url = base_url +"/publish/"+entity_id+"."+stream
+    publish_url = base_url +"/publish/"+self_id+"."+stream
     publish_headers = {"apikey":str(apikey)}
     response = requests.post(url=publish_url, headers=publish_headers, data=data, verify=False)
     s = response.status_code
     if( s == 200):
             return True
     else:
-            print ("ERROR: Publish (stream=",stream,") failed for entity",entity_id,"with status code",s,"and response", response.text)
+            print ("ERROR: Publish (stream=",stream,") failed for entity",self_id,"with status code",s,"and response", response.text)
             return False, 0
 
 
@@ -154,40 +155,45 @@ import time
     
    
 def run_test():
-    #success = deregister("dev1")
-    #success = deregister("app1")
 
-
-    # Register dev1
-    print("REGISTER: Registering dev1: ",end=''),
-    success, dev1_apikey = register("dev1")
-    print("success = ",success, "apikey = ",dev1_apikey)
+    # Register device1
+    print("REGISTER: Registering device1: ",end=''),
+    success, device1_apikey = register("device1")
+    print("success = ",success, "apikey = ",device1_apikey)
     
     # Register app1
     print("REGISTER: Registering app1: ",end=''),
     success, app1_apikey = register("app1")
     print("success = ",success, "apikey = ",app1_apikey)
+    
+   
 
-    # Let app1 follow dev1 (read)
-    print("FOLLOW: app1 sent a request to follow(read) dev1: ",end=''),
-    success = follow("app1", app1_apikey,"dev1","read")
+
+    # Let app1 follow device1 (read)
+    print("FOLLOW: app1 sent a request to follow(read) device1: ",end=''),
+    success = follow("app1", app1_apikey,"device1","read")
     print("success = ",success)
     
+    # Let app1 follow device1 (write)
+    print("FOLLOW: app1 sent a request to follow(write) device1: ",end=''),
+    success = follow("app1", app1_apikey,"device1","write")
+    print("success = ",success)
+
     time.sleep(2)
    
    
-    # Get dev1 to check all follow requests forwarded to it
+    # Get device1 to check all follow requests forwarded to it
     # and approve each request
-    success, response = subscribe("dev1.follow", dev1_apikey,10)
+    success, response = subscribe("device1.follow", device1_apikey,10)
     if(success):
         r = response.json()
         for req in r:
             requesting_entity = req["data"]["requestor"]
             permission_sought = req["data"]["permission"]
 
-            print ("FOLLOW: dev1 received a follow request from",requesting_entity,"for permission=",permission_sought)
-            share_status, share_response = share("dev1", dev1_apikey, requesting_entity, permission_sought)
-            print ("SHARE: dev1 sent a share request for entity",requesting_entity,"for permission=",permission_sought, end='')
+            print ("FOLLOW: device1 received a follow request from",requesting_entity,"for permission=",permission_sought)
+            share_status, share_response = share("device1", device1_apikey, requesting_entity, permission_sought)
+            print ("SHARE: device1 sent a share request for entity",requesting_entity,"for permission=",permission_sought, end='')
             print (" status=",share_status)
     
     # Get app1 to check for notifications (responses to its follow request)
@@ -199,38 +205,38 @@ def run_test():
         else:
             print ("FOLLOW: app1's follow request was *Not* Approved.")
             
-    # Get app1 to bind to dev1's protected stream
-    success, response = bind("app1", app1_apikey, "dev1.protected")
-    print ("BIND: app1 sent a bind request for dev1.protected. success = ",success,"response=",response.text)
+    # Get app1 to bind to device1's protected stream
+    success, response = bind("app1", app1_apikey, "device1.protected")
+    print ("BIND: app1 sent a bind request for device1.protected. success = ",success,"response=",response.text)
 
     
-    # Get dev1 to publish some stuff.
+    # Get device1 to publish some stuff.
     for i in range (10):
         data = '{"temp": "'+str(100+i)+'"}'
-        print("PUBLISH: Publishing from dev1. Data=",data,".",end=''),
-        success = publish("dev1", dev1_apikey,data,"protected")
+        print("PUBLISH: Publishing from device1. Data=",data,".",end=''),
+        success = publish("device1", device1_apikey,data,"protected")
         print("success = ",success)
    
     time.sleep(1)
     # Get app1 to print the data it has susbscribed to
     success, response = subscribe("app1", app1_apikey,20)
     if(success):
-        print ("SUBSCRIBE: app1 received the following data from dev1:")
+        print ("SUBSCRIBE: app1 received the following data from device1:")
         r = response.json()
         for entry in r:
             print(entry["data"]["temp"]," ",end='')
-
+    
     print("")
-    # De-register dev1
-    print("De-registering dev1: ",end=''),
-    success = deregister("dev1")
+    # De-register device1
+    print("DE-REGISTER: De-registering device1: ",end=''),
+    success = deregister("device1")
     print("success = ",success)
     
     # De-register app1
-    print("De-registering app1: ",end=''),
+    print("DE-REGISTER: De-registering app1: ",end=''),
     success = deregister("app1")
     print("success = ",success)
-
+    return 
 
     
 if __name__=='__main__':
