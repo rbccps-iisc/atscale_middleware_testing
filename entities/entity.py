@@ -1,98 +1,142 @@
-# Models an entity in the ideam middleware.
-# This is a base class for all device/app models.
+# Simpy model for a basic entity.
+#
+# Each entitiy spawns a messaging thread.
+# The messaging thread is responsible 
+# for all blocking-type or polling-based communication
+# with the middleware.
 
+
+
+#!python3
 from __future__ import print_function 
 import os, sys
-import random
+import threading
+from queue import Queue
 import simpy
+import time
 
 
-# import the messaging library 
-# for communicating with the middleware
-sys.path.insert(0, '../messaging/https')
-from messaging_https import *
+sys.path.insert(0, '../messaging')
+# routines for communicating with the ideam middleware:
+import ideam_messaging
+# routines for setting up entities and permissions in the middleware
+import setup_entities
 
+
+# lock to serialize console output
+lock = threading.Lock()
+
+
+class MessagingInterface(object):
+    
+    def __init__(self,name,apikey):
+        self.name = name
+        self.apikey = apikey
+        
+        # create queues to communicate with the parent entity
+        self.publish_queue = Queue()
+        self.notification_queue = Queue()
+        with lock:
+            print("CommunicationInterface for entitiy",self.name,"created.")
+
+    def publish_thread(self):
+        while True:
+            # wait until there's a msg to be published
+            msg = self.publish_queue.get()
+            # send the message to the middleware
+            success = ideam_messaging.publish(str(self.name), "protected", str(self.apikey), msg)
+            self.publish_queue.task_done()
 
 class Entity(object):
+    """ Entity is the base class for Device and App classes.
+    Each entity has a name, and inside its init function,
+    it spawns the messaging interface threads to communicate
+    with the middleware.
+    """
     
-    def __init__(self, env, name):
-        self.env=env
-        self.name=name
-        self.apikey=None
-        # register the device with the middleware and get the apikey
-        success, self.apikey = register(self.name)
-        if(success):
-            print(self.name,"registration successful. Apikey = ",self.apikey)
-        else:
-            print(self.name,"registration failed.")
-
-    def __del__(self):
+    def __init__(self, env, name, apikey):
         
-        # deregister the device
-        success = deregister(self.name)
-        if(success):
-            print(self.name,"deregistered.")
-        else:
-            print(self.name,"de-registration failed.")
-
-
-
-class Device(Entity):
-    
-    def __init__(self, env, name, start_time):
-        Entity.__init__(self,env,name)
-        self.start_time = start_time
-        self.process=env.process(self.behavior())
+        self.env = env
+        self.name = name
         
+        # create a messaging interface
+        self.messaging_interface = MessagingInterface(self.name,apikey)
+        t = threading.Thread(target=self.messaging_interface.publish_thread)
+        t.daemon = True  
+        t.start()
+
         # some state variables
-        self.num_publish_requests=0
+        self.published_count =0
+
+        # start a simpy process for the main device behavior
+        self.process=self.env.process(self.behavior())
+    
+    
+    # helper routine to publish a message
+    def publish(self,msg):
+        self.messaging_interface.publish_queue.put(msg)
+        self.published_count +=1
+        with lock:
+            print(self.name,"published msg=",msg)
 
     def behavior(self):
-
-        #checks:
-        assert(self.apikey!=None)
-        
-        # wait until this device's start_time
-        yield self.env.timeout(self.start_time)
-
         
         start = time.perf_counter()
-        while (self.num_publish_requests <6):
-
+        while (self.published_count < 10):
             # wait for 1 sec
-            yield self.env.timeout(2)
+            yield self.env.timeout(1)
             end = time.perf_counter()
-            print("Real time =", end - start)
-            print("Sim time = ",self.env.now)
-
+            
+            with lock:
+                print("Real time =", end - start)
+                print("Sim time = ",self.env.now)
             
             # publish a message
-            data = '{"temp": "'+str(100+self.num_publish_requests)+'"}'
-            print(self.name,"publishing. Data=",data,".",end=''),
-            success = publish(self_id=self.name, apikey=self.apikey, data=data, stream="protected")
-            print("success = ",success)
-            sys.stdout.flush()
-            self.num_publish_requests +=1
+            msg = '{"value": "'+str(self.published_count)+'"}'
+            self.publish(msg)
 
 
+
+# Testbench
 import simpy.rt
 
-def run_test():
+if __name__=='__main__':
     
-    # Create an Environment:
-    env = simpy.rt.RealtimeEnvironment(factor=2, strict=False)
-    # env=simpy.Environment()
+    devices = ["device"+str(i) for i in range(2)]
+    apps =  ["app"]
 
-    devices=[]
+    system_description = {  "entities" : devices+apps,
+                            "permissions" : [("app",d,"read") for d in devices]
+                        }
+    registered_entities = []
+    print("Setting up entities for system description:")
+    print(system_description)
+    success, registered_entities = setup_entities.setup_entities(system_description)
     
-    # Create 20 devices.
-    for i in range(2):
-        devices.append(Device(env,"device"+str(i),start_time=i+5))
-    print("Devices = ",devices)
-    env.run()
+    if success:
+        print("Setup done. Registered entities:",registered_entities)
+        # create a SimPy Environment:
+        # real-time:
+        env = simpy.rt.RealtimeEnvironment(factor=1, strict=True)
+        # as-fast-as-possible (non real-time):
+        # env=simpy.Environment()
 
+        entities=[]
 
-run_test()
+        # populate the environment with devices.
+        for i in registered_entities:
+            name = i
+            apikey = registered_entities[i]
+            entity_instance = Entity(env=env,name=i,apikey=apikey)
+            entities.append( (name,apikey,entity_instance))
+
+        try:
+            # run simulation till there are no more events.
+            env.run()
+        finally:
+            print("De-registering all entities")
+            setup_entities.deregister_entities(registered_entities)
+
 
 
 
