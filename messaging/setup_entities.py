@@ -19,7 +19,7 @@
 
 from __future__ import print_function 
 from ideam_messaging import *
-
+import time 
 
 def deregister_entities(registered_entities):
     """ Takes a python dictionary of the form 
@@ -27,9 +27,10 @@ def deregister_entities(registered_entities):
     as argument, and deregisters each entity.
     """
     for entity in registered_entities:
-        print("DE-REGISTER: De-registering", entity, end=''),
         success = deregister(entity)
-        print(" success = ",success)
+        if(success):
+            print("DE-REGISTER: De-registering", entity, "successful.")
+        assert(success)
 
 
 def setup_entities(system_description):
@@ -45,7 +46,6 @@ def setup_entities(system_description):
         system_description = {  "entities"       : [ "dev1", "dev2", "appX", "appY"],
                                "permissions"   : [ ("appX","dev1","read"),("appX","dev1","write"),("appY","dev2","read")]
                            }
-
      Return Values:
      The routines returns True if there were no errors 
      and also returns a python dictionary containing the names of 
@@ -57,16 +57,17 @@ def setup_entities(system_description):
 
         entities = system_description["entities"]
         permissions = system_description["permissions"]
-
+        
+        start = time.time()
         # Register the entities:
         for i in entities:
-            print("REGISTER: Registering",i,end=''),
             success, apikey = register(i)
-            if (success) : 
-                print(" success = ",success, "apikey = ",apikey)
-                registered_entities[i]=apikey
-            else:
-                raise ValueError("Registration failed")
+            assert (success)
+            print("REGISTER: registering entity",i," successful. apikey = ",apikey)
+            registered_entities[i]=apikey
+        end = time.time()
+        print("TIME:","registration for",len(entities),"entities took ",end-start,"seconds.")
+
         
         # Set up permissions
         for p in permissions:
@@ -81,50 +82,39 @@ def setup_entities(system_description):
             target_entity_apikey = registered_entities[target_entity]
             
             # send follow requests
-            print("FOLLOW:",requestor,"sending a follow request to",target_entity,"for permission=",permission,". ", end='')
             success = follow(requestor, requestor_apikey, target_entity, permission)
-            if success:
-                print(" success = ",success)
-            else:
-                raise ValueError("Follow requests failed")
-            
+            assert(success)
+            print("FOLLOW:",requestor,"sending a follow request to",target_entity,"for permission=",permission,"successful.")
             
             # get the target_entity to approve the follow request
             success, response = subscribe(target_entity,"follow", target_entity_apikey,1)
-            if(success):
-                r = response.json()
-                for req in r:
-                    requesting_entity = req["data"]["requestor"]
-                    permission_sought = req["data"]["permission"]
-
+            assert(success)
+            r = response.json()
+            for req in r:
+                requesting_entity = req["data"]["requestor"]
+                permission_sought = req["data"]["permission"]
+                
                 print ("FOLLOW: ",target_entity,"received a follow request from",requesting_entity,"for permission=",permission_sought)
                 share_status, share_response = share(target_entity,target_entity_apikey, requesting_entity, permission_sought)
+                assert(share_status)
                 print ("SHARE: ", target_entity, "sent a share request for entity",requesting_entity,"for permission=",permission_sought, end='')
-                print (" status=",share_status)
-            else:
-                raise ValueError("Subscribe requests failed")
-                
-
+            
             # get the requestor to check for notifications 
             success, response = subscribe(requestor,"notify", requestor_apikey,1)
+            assert(success)
             r = response.json()
-            if(success and "Approved" in response.text):
+            if("Approved" in response.text):
                 print ("FOLLOW: app1's follow request was Approved.")
-            else:
-                raise ValueError("Subscribe requests failed with response"+response.text)
-            
             # get the requestor to bind to the target entity's protected stream
             success, response = bind(requestor, requestor_apikey, target_entity,"protected")
-            if success:
-                print ("BIND:",requestor,"sent a bind request for",target_entity,". success = ",success)
-            else:
-                raise ValueError("Bind requests failed")
+            assert(success)
+            print ("BIND:",requestor,"sent a bind request for",target_entity,". successful.")
 
         return True, registered_entities
     
     except Exception as ex:
         print(ex)
-        print("ERROR: an exception occurred.")
+        print("ERROR: an exception occurred during setup.")
         print("Deregistering all entities.")
         deregister_entities(registered_entities)
         raise
@@ -134,8 +124,8 @@ def setup_entities(system_description):
 # Testbench:
 if __name__=='__main__':
     
-    system_description = {  "entities"       : [ "d0","d1","a0","a1"],
-                            "permissions"   : [ ("a0","d0","read"),("a0","d0","write"),("a1","d0","read")]
+    system_description = {  "entities"       : [ "dev0","dev1","app"],
+                            "permissions"   : [ ("app","dev0","read"),("app","dev0","write")]
                         }
     
     print("Setting up entities for system description:")

@@ -102,7 +102,7 @@ import simpy.rt
 
 if __name__=='__main__':
     
-    devices = ["device"+str(i) for i in range(2)]
+    devices = ["device"+str(i) for i in range(3)]
     apps =  ["app"]
 
     system_description = {  "entities" : devices+apps,
