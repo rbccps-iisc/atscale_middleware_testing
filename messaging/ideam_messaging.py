@@ -10,7 +10,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) # disable SSL check warnings.
 
 # IP address of the middleware server
-IDEAM_ip_address = "localhost"
+IDEAM_ip_address = "127.0.0.1"
 
 # api version
 IDEAM_api = "1.0.0"
@@ -195,9 +195,6 @@ def run_test():
         success = follow("app1", app1_apikey,"device1","write")
         print("success = ",success)
 
-        time.sleep(2)
-   
-   
         # Get device1 to check all follow requests forwarded to it
         # and approve each request
         success, response = subscribe("device1","follow", device1_apikey,10)
@@ -233,7 +230,6 @@ def run_test():
             success = publish("device1", "protected", device1_apikey, data)
             print("success = ",success)
    
-        time.sleep(1)
         # Get app1 to print the data it has susbscribed to
         success, response = subscribe("app1", app1_apikey,20)
         if(success):

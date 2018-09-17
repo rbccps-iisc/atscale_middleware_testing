@@ -14,7 +14,7 @@ import threading
 from queue import Queue
 import simpy
 import time
-
+import json
 
 sys.path.insert(0, '../messaging')
 # routines for communicating with the ideam middleware:
@@ -46,6 +46,8 @@ class MessagingInterface(object):
             # send the message to the middleware
             success = ideam_messaging.publish(str(self.name), "protected", str(self.apikey), msg)
             self.publish_queue.task_done()
+            with lock:
+                print("CommunicationInterface for entitiy",self.name,"published a msg",msg)
 
 class Entity(object):
     """ Entity is the base class for Device and App classes.
@@ -67,6 +69,7 @@ class Entity(object):
 
         # some state variables
         self.published_count =0
+        self.start_real_time = 0
 
         # start a simpy process for the main device behavior
         self.process=self.env.process(self.behavior())
@@ -76,24 +79,22 @@ class Entity(object):
     def publish(self,msg):
         self.messaging_interface.publish_queue.put(msg)
         self.published_count +=1
+        elapsed_real_time = round(time.perf_counter() - self.start_real_time,2)
         with lock:
-            print(self.name,"published msg=",msg)
+            print("SIM TIME =",self.env.now, "REAL TIME =", elapsed_real_time, end='')
+            print(" ",self.name,"published msg=",msg)
 
     def behavior(self):
         
-        start = time.perf_counter()
+        self.start_real_time = time.perf_counter()
         while (self.published_count < 10):
             # wait for 1 sec
             yield self.env.timeout(1)
-            end = time.perf_counter()
-            
-            with lock:
-                print("Real time =", end - start)
-                print("Sim time = ",self.env.now)
             
             # publish a message
-            msg = '{"value": "'+str(self.published_count)+'"}'
-            self.publish(msg)
+            msg = {"sender": self.name, "sensor_value":100+self.published_count}
+            msg_json_str = json.dumps(msg)
+            self.publish(msg_json_str)
 
 
 
@@ -102,19 +103,24 @@ import simpy.rt
 
 if __name__=='__main__':
     
-    devices = ["device"+str(i) for i in range(3)]
+    devices = ["device"+str(i) for i in range(2)]
     apps =  ["app"]
 
     system_description = {  "entities" : devices+apps,
-                            "permissions" : [("app",d,"read") for d in devices]
+                            "permissions" : [(a,d,"read") for a in apps for d in devices]
                         }
+    
     registered_entities = []
-    print("Setting up entities for system description:")
+    print("---------------------")
+    print("SETUP START: setting up entities and permissions from system description:")
     print(system_description)
     success, registered_entities = setup_entities.setup_entities(system_description)
     
     if success:
-        print("Setup done. Registered entities:",registered_entities)
+        print("SETUP DONE: registered entities:",registered_entities)
+        print("---------------------")
+        
+        
         # create a SimPy Environment:
         # real-time:
         env = simpy.rt.RealtimeEnvironment(factor=1, strict=True)
@@ -134,11 +140,8 @@ if __name__=='__main__':
             # run simulation till there are no more events.
             env.run()
         finally:
+            print("---------------------")
             print("De-registering all entities")
             setup_entities.deregister_entities(registered_entities)
-
-
-
-
-        
+            print("---------------------")
 

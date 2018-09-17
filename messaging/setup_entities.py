@@ -21,12 +21,11 @@ from __future__ import print_function
 from ideam_messaging import *
 import time 
 
-def deregister_entities(registered_entities):
-    """ Takes a python dictionary of the form 
-    {"entity1":apikey1, "entity2":apikey2...}
-    as argument, and deregisters each entity.
+def deregister_entities(list_of_entity_names):
+    """ Takes a list of entity names and 
+    deregisters them one-by-one.
     """
-    for entity in registered_entities:
+    for entity in list_of_entity_names:
         success = deregister(entity)
         if(success):
             print("DE-REGISTER: De-registering", entity, "successful.")
@@ -58,53 +57,73 @@ def setup_entities(system_description):
         entities = system_description["entities"]
         permissions = system_description["permissions"]
         
-        start = time.time()
-        # Register the entities:
-        for i in entities:
-            success, apikey = register(i)
-            assert (success)
-            print("REGISTER: registering entity",i," successful. apikey = ",apikey)
-            registered_entities[i]=apikey
-        end = time.time()
-        print("TIME:","registration for",len(entities),"entities took ",end-start,"seconds.")
-
+        # check if all entity names are sane.
+        for name in entities:
+            if not (all(c.isdigit() or c.islower() for c in name)):
+                print("ERROR: Illegal entity name:",name,end='')
+                print(" Entity names can only contain lowercase letters and numbers.")
+                assert(False),"Illegal entity name"
         
-        # Set up permissions
+        # check if all permissions are sane
         for p in permissions:
+            assert(len(p)==3)
             requestor = p[0]
             target_entity = p[1]
             permission = p[2]
             
             assert(requestor in entities)
             assert(target_entity in entities)
-            assert(permission=="read" or permission=="write" or permission=="readwrite")
+            assert(permission=="read" or permission=="write" or permission=="read-write")
+        
+        
+        # Now register all entities:
+        start = time.time()
+        for i in entities:
+            success, apikey = register(i)
+            assert (success)
+            print("REGISTER: registering entity",i," successful. apikey = ",apikey)
+            registered_entities[i]=apikey
+        end = time.time()
+        print("REGISTRATION TIME:","registration for",len(entities),"entities took ",end-start,"seconds.")
+
+        
+        # Set up permissions one-by-one
+        for p in permissions:
+            requestor = p[0]
+            target_entity = p[1]
+            permission = p[2]
+            
             requestor_apikey = registered_entities[requestor]
             target_entity_apikey = registered_entities[target_entity]
             
-            # send follow requests
+            # send a follow request
             success = follow(requestor, requestor_apikey, target_entity, permission)
             assert(success)
-            print("FOLLOW:",requestor,"sending a follow request to",target_entity,"for permission=",permission,"successful.")
+            print("FOLLOW:",requestor,"sent a follow request to",target_entity,"for permission=",permission)
+            time.sleep(1)
             
-            # get the target_entity to approve the follow request
+            # get the target_entity to check the follow request
             success, response = subscribe(target_entity,"follow", target_entity_apikey,1)
             assert(success)
             r = response.json()
-            for req in r:
-                requesting_entity = req["data"]["requestor"]
-                permission_sought = req["data"]["permission"]
-                
-                print ("FOLLOW: ",target_entity,"received a follow request from",requesting_entity,"for permission=",permission_sought)
-                share_status, share_response = share(target_entity,target_entity_apikey, requesting_entity, permission_sought)
-                assert(share_status)
-                print ("SHARE: ", target_entity, "sent a share request for entity",requesting_entity,"for permission=",permission_sought, end='')
+            assert (len(r)>0) and ("data" in r[0])
+            req = r[0]
+            requesting_entity = req["data"]["requestor"]
+            permission_sought = req["data"]["permission"]
+            print ("FOLLOW:",target_entity,"received a follow request from",requesting_entity,"for permission=",permission_sought)
+
+            # get the target entitity to approve the follow request using "share" 
+            success, response = share(target_entity,target_entity_apikey, requesting_entity, permission_sought)
+            assert(success)
+            print ("SHARE:", target_entity, "sent a share request for entity",requesting_entity,"for permission=",permission_sought)
             
-            # get the requestor to check for notifications 
+            # get the requestor to check for the follow notification
             success, response = subscribe(requestor,"notify", requestor_apikey,1)
             assert(success)
             r = response.json()
-            if("Approved" in response.text):
-                print ("FOLLOW: app1's follow request was Approved.")
+            assert("Approved" in response.text)
+            print ("FOLLOW: follow request made by",requestor,"was approved.")
+            
             # get the requestor to bind to the target entity's protected stream
             success, response = bind(requestor, requestor_apikey, target_entity,"protected")
             assert(success)
@@ -113,10 +132,10 @@ def setup_entities(system_description):
         return True, registered_entities
     
     except Exception as ex:
-        print(ex)
         print("ERROR: an exception occurred during setup.")
         print("Deregistering all entities.")
-        deregister_entities(registered_entities)
+        deregister_entities(entities)
+        print("Raising the exception to caller")
         raise
         
 
@@ -124,13 +143,14 @@ def setup_entities(system_description):
 # Testbench:
 if __name__=='__main__':
     
-    system_description = {  "entities"       : [ "dev0","dev1","app"],
-                            "permissions"   : [ ("app","dev0","read"),("app","dev0","write")]
+    system_description = {  "entities"       : [ "device","app"],
+                            "permissions"   : [ ("app","device","read"),("app","device","write")]
                         }
     
     print("Setting up entities for system description:")
     print(system_description)
     success, registered_entities = setup_entities(system_description)
     print("-----------------------")
-    print("Setup done. Registered entities:",registered_entities)
+    print("SETUP DONE: registered entities:",registered_entities)
+    print("-----------------------")
     deregister_entities(registered_entities)
