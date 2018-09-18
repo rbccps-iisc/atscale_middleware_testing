@@ -66,7 +66,7 @@ def publish(entity_id, stream, apikey, data):
     publish_headers = {"apikey":str(apikey)}
     response = requests.post(url=publish_url, headers=publish_headers, data=data, verify=False)
     s = response.status_code
-    if( s == 200):
+    if( s == 202):
             return True
     else:
             print ("ERROR: Publish (stream=",stream,") failed for entity",entity_id,"with status code",s,"and response", response.text)
