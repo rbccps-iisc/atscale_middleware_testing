@@ -52,6 +52,11 @@ def setup_entities(system_description):
      """
     registered_entities = {}
 
+    print("---------------------")
+    print("SETUP START: setting up entities and permissions from system description:")
+    print(system_description)
+    print("---------------------")
+
     try:
 
         entities = system_description["entities"]
@@ -100,13 +105,16 @@ def setup_entities(system_description):
             success = follow(requestor, requestor_apikey, target_entity, permission)
             assert(success)
             print("FOLLOW:",requestor,"sent a follow request to",target_entity,"for permission=",permission)
-            time.sleep(1)
+            time.sleep(0.1)
             
             # get the target_entity to check the follow request
             success, response = subscribe(target_entity,"follow", target_entity_apikey,1)
             assert(success)
             r = response.json()
             assert (len(r)>0) and ("data" in r[0])
+            assert("requestor" in r[0]["data"])
+            assert("permission" in r[0]["data"])
+
             req = r[0]
             requesting_entity = req["data"]["requestor"]
             permission_sought = req["data"]["permission"]
@@ -129,6 +137,10 @@ def setup_entities(system_description):
             assert(success)
             print ("BIND:",requestor,"sent a bind request for",target_entity,". successful.")
 
+        
+        print("-----------------------")
+        print("SETUP DONE: registered entities:",registered_entities)
+        print("---------------------")
         return True, registered_entities
     
     except Exception as ex:
@@ -147,10 +159,5 @@ if __name__=='__main__':
                             "permissions"   : [ ("app","device","read"),("app","device","write")]
                         }
     
-    print("Setting up entities for system description:")
-    print(system_description)
     success, registered_entities = setup_entities(system_description)
-    print("-----------------------")
-    print("SETUP DONE: registered entities:",registered_entities)
-    print("-----------------------")
     deregister_entities(registered_entities)

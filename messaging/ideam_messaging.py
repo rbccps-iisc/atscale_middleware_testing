@@ -112,7 +112,7 @@ def subscribe(self_id, stream, apikey, max_entries):
     if( s == 200):
             return True, response
     else:
-            print ("ERROR: Follow request failed for sender entity",self_id,"with status code",s,"and response", response.text)
+            print ("ERROR: Subscribe request failed for sender entity",self_id,"with status code",s,"and response", response.text)
             return False, response
 
 
