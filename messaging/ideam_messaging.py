@@ -176,28 +176,31 @@ def run_test():
         # Register device1
         print("REGISTER: Registering device1: ",end=''),
         success, device1_apikey = register("device1")
-        print("success = ",success, "apikey = ",device1_apikey)
+        assert(success)
+        print("successful. apikey = ",device1_apikey)
         
         # Register app1
         print("REGISTER: Registering app1: ",end=''),
         success, app1_apikey = register("app1")
-        print("success = ",success, "apikey = ",app1_apikey)
+        assert(success)
+        print("successful. apikey = ",app1_apikey)
         
    
 
         # Let app1 follow device1 (read)
-        print("FOLLOW: app1 sent a request to follow(read) device1: ",end=''),
         success = follow("app1", app1_apikey,"device1","read")
-        print("success = ",success)
+        assert(success)
+        print("FOLLOW: app1 sent a request to follow(read) device1")
         
         # Let app1 follow device1 (write)
-        print("FOLLOW: app1 sent a request to follow(write) device1: ",end=''),
         success = follow("app1", app1_apikey,"device1","write")
-        print("success = ",success)
+        assert(success)
+        print("FOLLOW: app1 sent a request to follow(write) device1")
 
         # Get device1 to check all follow requests forwarded to it
         # and approve each request
         success, response = subscribe("device1","follow", device1_apikey,10)
+        assert(success)
         if(success):
             r = response.json()
             for req in r:
@@ -206,37 +209,40 @@ def run_test():
 
                 print ("FOLLOW: device1 received a follow request from",requesting_entity,"for permission=",permission_sought)
                 share_status, share_response = share("device1", device1_apikey, requesting_entity, permission_sought)
-                print ("SHARE: device1 sent a share request for entity",requesting_entity,"for permission=",permission_sought, end='')
-                print (" status=",share_status)
+                assert(share_status)
+                print ("SHARE: device1 sent a share request for entity",requesting_entity,"for permission=",permission_sought)
         
         # Get app1 to check for notifications (responses to its follow request)
         success, response = subscribe("app1","notify", app1_apikey,1)
-        if(success):
-            r = response.json()
-            if ("Approved" in response.text):
-                print ("FOLLOW: app1's follow request was Approved.")
-            else:
-                print ("FOLLOW: app1's follow request was *Not* Approved.")
+        assert(success)
+        r = response.json()
+        assert("Approved" in response.text)
+        print ("FOLLOW: app1's follow request was Approved.")
                 
         # Get app1 to bind to device1's protected stream
         success, response = bind("app1", app1_apikey, "device1","protected")
-        print ("BIND: app1 sent a bind request for device1.protected. success = ",success,"response=",response.text)
+        assert(success)
+        assert("Bind Queue OK" in response.text)
+        print ("BIND: app1 sent a bind request for device1.protected. response=",response.text)
 
         
         # Get device1 to publish some stuff.
         for i in range (10):
             data = '{"temp": "'+str(100+i)+'"}'
-            print("PUBLISH: Publishing from device1. Data=",data,".",end=''),
+            print("PUBLISH: Publishing from device1. Data=",data)
             success = publish("device1", "protected", device1_apikey, data)
-            print("success = ",success)
-   
+            assert(success)
+        
+
         # Get app1 to print the data it has susbscribed to
-        success, response = subscribe("app1", app1_apikey,20)
-        if(success):
-            print ("SUBSCRIBE: app1 received the following data from device1:")
-            r = response.json()
-            for entry in r:
-                print(entry["data"]["temp"]," ",end='')
+        success, response = subscribe(self_id="app1",stream=None, apikey=app1_apikey, max_entries=200)
+        assert(success)
+        print ("SUBSCRIBE: app1 received the following data from device1:")
+        r = response.json()
+        for entry in r:
+            print(entry)
+
+
     finally:        
         print("")
         # De-register device1
@@ -251,9 +257,7 @@ def run_test():
         return 
   
 
-
-
-def run_test2():
+def run_test_registration_deregistration():
 
     try:
         # Register device1
