@@ -155,8 +155,11 @@ def setup_entities(system_description):
 # Testbench:
 if __name__=='__main__':
     
-    system_description = {  "entities"       : [ "device","app"],
-                            "permissions"   : [ ("app","device","read"),("app","device","write")]
+    devices = ["device"+str(i) for i in range(4)]
+    apps = ["app"+str(i) for i in range (1)]
+
+    system_description = {  "entities"       : devices+apps,
+                            "permissions"   : [ (a,d,"read") for a in apps for d in devices ]
                         }
     
     success, registered_entities = setup_entities(system_description)
