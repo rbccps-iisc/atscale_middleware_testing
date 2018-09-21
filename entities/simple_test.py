@@ -115,7 +115,7 @@ def do_deregistrations():
 if __name__=='__main__':
     
     # logging settings:
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     # suppress debug messages from other modules used.
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
