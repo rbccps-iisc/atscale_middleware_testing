@@ -29,17 +29,21 @@ print_lock = threading.Lock()
 class CommunicationInterface(object):
     """ Base class for publish/subscribe interfaces."""
     
-    def __init__(self,interface_name,entity_name,stream,apikey):
+    def __init__(self, interface_name, parent_entity_name, target_entity_name, stream, apikey):
         
-        # name of this messaging interface. 
+        # name of this messaging interface.
+        # because one entity can own multiple interfaces
         self.interface_name = interface_name 
+
+        # name of the parent entity that owns this interface
+        self.parent_entity_name = parent_entity_name
         
         # create queues to communicate with the parent entity
         self.queue = Queue()
         
         # communication settings
-        self.entity_name = entity_name # name of parent entity 
-        self.stream=stream # stream (protected/public/notifications etc)
+        self.target_entity_name = target_entity_name # name of the entity to be used as exchange name for publish/subscribe.
+        self.stream=stream # stream (protected/public/configuration/notify etc)
         self.apikey = apikey # apikey
         
         # verbosity settings.
@@ -47,14 +51,14 @@ class CommunicationInterface(object):
         self.verbose = True
 
         # some useful variables
-        self.name = self.entity_name + "." + self.interface_name
+        self.name = self.parent_entity_name + "." + self.interface_name
         self.message_count =0
 
 class PublishInterface(CommunicationInterface):
     
-    def __init__(self,interface_name,entity_name,stream,apikey):
+    def __init__(self, interface_name, parent_entity_name, target_entity_name, stream, apikey):
+        CommunicationInterface.__init__(self, interface_name, parent_entity_name, target_entity_name, stream, apikey)
         
-        CommunicationInterface.__init__(self,interface_name,entity_name,stream,apikey) 
         # spawn the behaviour function as an independent thread
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.behavior)
@@ -81,7 +85,7 @@ class PublishInterface(CommunicationInterface):
             # wait until there's a msg to be published
             msg = self.queue.get()
             # send the message to the middleware
-            success = ideam_messaging.publish(self.entity_name, self.stream, self.apikey, msg)
+            success = ideam_messaging.publish(self.target_entity_name, self.stream, self.apikey, msg)
             assert(success)
             if self.verbose:
                 with print_lock:
@@ -92,12 +96,12 @@ class PublishInterface(CommunicationInterface):
 
 class SubscribeInterface(CommunicationInterface):
     
-    def __init__(self,interface_name,entity_name,stream,apikey):
+    def __init__(self, interface_name, parent_entity_name, target_entity_name, stream, apikey):
+        CommunicationInterface.__init__(self, interface_name, parent_entity_name, target_entity_name, stream, apikey)
         
-        CommunicationInterface.__init__(self,interface_name,entity_name,stream,apikey)
-        self.polling_interval = 1 # time (in seconds) between subscribe requests
       
       # spwan the behaviour function as an independent thread
+        self.polling_interval = 1 # time (in seconds) between subscribe requests
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.behavior)
         self.thread.daemon = True
@@ -121,10 +125,13 @@ class SubscribeInterface(CommunicationInterface):
 
         while not self.stop_event.wait(timeout=self.polling_interval):
             # subscribe from middleware
-            success, response = ideam_messaging.subscribe(self_id=self.entity_name,stream=self.stream, 
+            success, response = ideam_messaging.subscribe(self_id=self.target_entity_name,stream=self.stream, 
                 apikey=self.apikey, max_entries=100)
             assert(success)
             r = response.json()
+            if self.verbose:
+                with print_lock:
+                    print("Thread",self.name,"received response = ",response.text)
             for entry in r:
                 # push the message into the queue
                 self.queue.put(entry)
@@ -155,11 +162,11 @@ if __name__=='__main__':
         assert(success)
         
         # create two publish threads for "dev"
-        p1 = PublishInterface("p1", "dev", "protected", registered_entities["dev"])
-        p2 = PublishInterface("p2", "dev", "protected", registered_entities["dev"])
+        p1 = PublishInterface("p1","dev","dev","protected",registered_entities["dev"])
+        p2 = PublishInterface("p2","dev","dev","protected",registered_entities["dev"])
         
         # create one subscribe thread for "app"
-        s1 = SubscribeInterface("s1", "app", None, registered_entities["app"])
+        s1 = SubscribeInterface("s1","app","app", None, registered_entities["app"])
 
         # push something into the publish queue
         NUM_MSG = 10

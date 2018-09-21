@@ -39,6 +39,10 @@ class Device(object):
         self.publish_thread = communication_interface.PublishInterface("publish_thread", self.name, self.name, "protected", apikey)
         self.publish_thread.verbose=False
 
+        # create an interface to receive control messages
+        self.subscribe_thread = communication_interface.SubscribeInterface("subscribe_thread", self.name, self.name, "configure", apikey)
+        self.subscribe_thread.verbose=True
+
         # some state variables
         self.published_count= 0
         self.start_real_time = 0
@@ -67,4 +71,8 @@ class Device(object):
             # publish a message
             self.publish(json.dumps({"sender": self.name, "sensor_value":100+self.published_count}))
         
-        
+    # end the subscription thread
+    def end(self):
+        self.subscribe_thread.stop()
+
+      
