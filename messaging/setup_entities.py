@@ -137,7 +137,7 @@ def setup_entities(system_description):
             logger.debug("BIND: {} sent a bind request for {} .".format(requestor, target_entity))
 
         
-        logger.debug("SETUP DONE: registered entities: {}".format(registered_entities))
+        logger.debug("SETUP: done. registered entities: {}".format(registered_entities))
         return True, registered_entities
     
     except Exception as ex:

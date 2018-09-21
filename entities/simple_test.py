@@ -1,12 +1,11 @@
-#!/usr/bin/env python3
+#! python3
 
-# Simple tests for device and app models.
-# The devices only publish data and the apps only
-# subscribe to all the device's data and print it.
+# Simple test where an app subscribes to data
+# published by a device and also controls the 
+# device by sending commands on the <device>.configure channel.
 #
 # Author: Neha Karanjkar
 
-#!python3
 from __future__ import print_function 
 import os, sys
 import threading
@@ -14,40 +13,44 @@ from queue import Queue
 import simpy
 import time
 import json
+import simpy.rt
+import logging
+logger = logging.getLogger(__name__)
 
 
 # routines for setting up entities and permissions in the middleware
 sys.path.insert(0, '../messaging')
 import setup_entities
 
-# import the simple device and app models.
-import simple_device
-import simple_app
+# import the device and app models.
+from simple_device import Device
+from simple_app import App
 
 
-# Testbench
-import simpy.rt
 
-# register entities and store the info in a file "test_config.py"
+# register entities and store the info in a file "simple_test_config.py"
 def do_setup():
-    devices = ["dev"+str(i) for i in range(1)]
-    apps =  ["app"+str(i) for i in range(1)]
+    
+    print("Setting up registrations and permissions...",end='')
+    devices = ["dev"+str(i) for i in range(2)]
+    apps =  ["app"+str(i) for i in range(2)]
     system_description = {  "entities" : devices+apps,
-                            "permissions" : [(a,d,"read") for a in apps for d in devices]
+                            "permissions" : [(a,d,"read-write") for a in apps for d in devices]
                         }
     registered_entities = []
     success, registered_entities = setup_entities.setup_entities(system_description)
     assert(success)
-    with open('test_config.py', 'w') as f:
+    with open('simple_test_config.py', 'w') as f:
         f.write("\ndevices= %s"%devices)
         f.write("\napps= %s"%apps)
         f.write("\nregistered_entities= %s"%registered_entities)
+        f.write("\nsystem_description= %s"%system_description)
+    print("...done.")
   
 
 def run_test():
-   
-    # read the apikeys etc from a file
-    from test_config import devices, apps, registered_entities
+    # read the apikeys etc from file "simple_test_config.py"
+    from simple_test_config import devices, apps, registered_entities, system_description
 
     # run the simulation
     try:
@@ -57,28 +60,43 @@ def run_test():
         # as-fast-as-possible (non real-time):
         # env=simpy.Environment()
 
-        device_instances=[]
-        app_instances=[]
+        device_instances={}
+        app_instances={}
 
         # populate the environment with devices.
         for d in devices:
             name = d
             apikey = registered_entities[d]
-            device_instances.append(simple_device.Device(env=env,name=d,apikey=apikey))
+            device_instance = Device(env=env,name=d,apikey=apikey)
+            device_instances[d]=device_instance
         
         # populate the environment with apps.
         for a in apps:
             name = a
             apikey = registered_entities[a]
-            app_instance = simple_app.App(env=env,name=a,apikey=apikey)
-            app_instances.append(app_instance)
+            app_instance = App(env=env,name=a,apikey=apikey)
+            app_instances[a]=app_instance
+        
+        # setup control permissions between apps and devices
+        for p in system_description["permissions"]:
+            a = p[0]    # app name
+            d = p[1]    # device name
+            perm = p[2] # permission
+
+            if(perm=="write" or perm=="read-write"):
+                app_instances[a].add_device_to_be_controlled(d)
 
         # run simulation for a specified amount of time
+        simulation_time=12
+        print("Running simulation for",simulation_time,"seconds ....")
         env.run(12)
 
-        # end all subscription threads on app instances
-        for app in app_instances:
-            app.end()
+        # end all subscription threads on all entities
+        for d in device_instances:
+            device_instances[d].end()
+        for a in app_instances:
+            app_instances[a].end()
+
     except:
         print("There was an exception")
         raise
@@ -95,8 +113,16 @@ def do_deregistrations():
 
 
 if __name__=='__main__':
+    
+    # logging settings:
+    logging.basicConfig(level=logging.INFO)
+    # suppress debug messages from other modules used.
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    #logging.getLogger("communication_interface").setLevel(logging.WARNING)
+
     do_setup()
     run_test()
-    do_deregistrations()
+    #do_deregistrations()
     
 

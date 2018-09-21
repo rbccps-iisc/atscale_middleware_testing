@@ -121,8 +121,9 @@ class SubscribeInterface(CommunicationInterface):
                 logger.debug("thread {} received a message: {}".format(self.name,entry))
 
 
-
+#------------------------------------
 # Testbench
+#------------------------------------
 import setup_entities
 import time
 
