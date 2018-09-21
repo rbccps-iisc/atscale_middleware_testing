@@ -129,9 +129,6 @@ class SubscribeInterface(CommunicationInterface):
                 apikey=self.apikey, max_entries=100)
             assert(success)
             r = response.json()
-            if self.verbose:
-                with print_lock:
-                    print("Thread",self.name,"received response = ",response.text)
             for entry in r:
                 # push the message into the queue
                 self.queue.put(entry)
