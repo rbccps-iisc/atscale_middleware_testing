@@ -1,13 +1,22 @@
-# Common routines for communicating with the IDEAM middleware
-# using https requests.
+#!python3
+#
+# Common routines for communicating with the 
+# IDEAM middleware using python's requests library.
+#
+# Author: Neha Karanjkar
 
-from __future__ import print_function 
+
+from __future__ import print_function
 import requests
 import json
-import streetlight_schema
 import urllib3
+import logging
+logger = logging.getLogger(__name__)
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) # disable SSL check warnings.
+
+#----------------------------------------
+# Middleware settings:
+#----------------------------------------
 
 # IP address of the middleware server
 IDEAM_ip_address = "127.0.0.1"
@@ -18,10 +27,18 @@ IDEAM_api = "1.0.0"
 # urls for sending https requests to the apigateway 
 IDEAM_base_url = "https://"+IDEAM_ip_address+":8443/api/"+IDEAM_api
 
-# Registration
+# disable SSL check warnings.
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning) 
+
+# sample schema for registering a streetlight device.
+import streetlight_schema
+#----------------------------------------
+
+
+
 def register(self_id):
     """ Register an entity with the given self_id.
-    If registration succeeds, return True, <apikey>
+    If registration succeeds return True, <apikey>
     else return False, 0
     """
     register_url = IDEAM_base_url+ "/register"
@@ -30,13 +47,12 @@ def register(self_id):
     r = response.json()
     s = response.status_code
     if( s == 200 and r["Registration"] == "success"):
-            return True, r["apiKey"]
+        return True, r["apiKey"]
     else:
-            print ("ERROR: Registration failed for entity",self_id,"with response",response.text)
-            return False, 0
+        logger.error("registration failed for entity {} with response {}".format(self_id,response.text))
+        return False, 0
 
 
-# De-registration
 def deregister(self_id):
     """ De-register an entity with the given self_id.
     If de-registration succeeds return True else return False.
@@ -48,18 +64,20 @@ def deregister(self_id):
     r = response.json()
     s = response.status_code
     if( s == 200 and r["De-Registration"] == "success"):
-            return True
+        return True
     else:
-            print ("ERROR: De-registration failed for entity",self_id,"with response",response.text)
-            return False
+        logger.error("de-registration failed for entity {} with response {}".format(self_id,response.text))
+        return False
 
 # Publish
 def publish(entity_id, stream, apikey, data):
-    """ Publish data to an entity's stream.
-    entity_id : publish to which entity
-    stream : can be public/protected/configure
-    apikey: apikey of the publisher
-    data : data (string) to be published.
+    """ Publish data to a specified entity's exchange.
+
+    Arguments:
+        entity_id : name of the entity/exchange
+        stream    : can be public/protected/configure etc.
+        apikey    : apikey of the publisher
+        data      : data (json string) to be published.
     """
     
     publish_url = IDEAM_base_url +"/publish/"+entity_id+"."+stream
@@ -67,19 +85,21 @@ def publish(entity_id, stream, apikey, data):
     response = requests.post(url=publish_url, headers=publish_headers, data=data, verify=False)
     s = response.status_code
     if( s == 202):
-            return True
+        return True
     else:
-            print ("ERROR: Publish (stream=",stream,") failed for entity",entity_id,"with status code",s,"and response", response.text)
-            return False, 0
+        logger.error("publish (stream={}) failed for entity {} with status code {} and response {}".format(stream,entity_id,s,response.text))
+        return False, 0
 
 
 # Follow 
 def follow(self_id, apikey, entity_id, permission):
     """ Send a follow request to a specified entity.
-    self_id  : the id of the entity sending the follow request
-    apikey   : apikey of the entity sending the follow request
-    entity_id: id of the target entity which we wish to follow
-    permission: can be "read" or "write" or "readwrite"
+
+    Arguments:
+        self_id   : the id of the entity sending the follow request
+        apikey    : apikey of the entity sending the follow request
+        entity_id : id of the target entity which we wish to follow
+        permission: can be "read" or "write" or "readwrite"
     """
 
     follow_url = IDEAM_base_url +"/follow"
@@ -88,20 +108,21 @@ def follow(self_id, apikey, entity_id, permission):
     response = requests.post(url=follow_url, headers=follow_headers, data=json.dumps(data), verify=False)
     s = response.status_code
     if( s == 200):
-            return True
+        return True
     else:
-            print ("ERROR: Follow request failed for sender entity",self_id,"with status code",s,"and response", response.text,".")
-            print ( "url=",follow_url, "headers=",follow_headers)
-            return False, 0
+        logger.error("follow request failed for sender entity {} with status code {} and response {}".format(self_id,s,response.text))
+        return False, 0
 
 
 # Subscribe 
 def subscribe(self_id, stream, apikey, max_entries):
     """ Fetch data from the middleware meant for this entity
-    self_id  : the id of the entity from which to fetch data 
-    stream   : stream from which to fetch data. (None/protected/public/configure...)
-    apikey   : apikey of the entity sending the subscribe request
-    max_entries : max number of entries to fetch at a time
+    
+    Arguments:
+        self_id  : the id of the entity from which to fetch data 
+        stream   : stream from which to fetch data. (None/protected/public/configure...)
+        apikey   : apikey of the entity sending the subscribe request
+        max_entries : max number of entries to fetch at a time
     """
     if stream!=None:
         self_id = str(self_id)+"."+str(stream)
@@ -110,19 +131,21 @@ def subscribe(self_id, stream, apikey, max_entries):
     response = requests.get(url=subscribe_url, headers=subscribe_headers, verify=False)
     s = response.status_code
     if( s == 200):
-            return True, response
+        return True, response
     else:
-            print ("ERROR: Subscribe request failed for sender entity",self_id,"with status code",s,"and response", response.text)
-            return False, response
+        logger.error("subscribe request failed for sender entity {} with status code {} and response {}".format(self_id,s,response.text))
+        return False, response
 
 
 # Share 
 def share(self_id, apikey, entity_id, permission):
     """ Approve sharing of data in response to a follow request".
-    self_id   : the id of the entity sending the share request
-    apikey    : apikey of the entity sending the share request
-    entity_id : id of the entity which is being approved to follow this entity
-    permission: can be "read" or "write" or "readwrite
+
+    Arguments:
+        self_id   : the id of the entity sending the share request
+        apikey    : apikey of the entity sending the share request
+        entity_id : id of the entity which is being approved to follow this entity
+        permission: can be "read" or "write" or "readwrite
     """
 
     share_url = IDEAM_base_url +"/share"
@@ -131,18 +154,20 @@ def share(self_id, apikey, entity_id, permission):
     response = requests.post(url=share_url, headers=share_headers, data=json.dumps(data), verify=False)
     s = response.status_code
     if( s == 200):
-            return True, response
+        return True, response
     else:
-            print ("ERROR: Share request failed for sender entity",self_id,"with status code",s,"and response", response.text)
-            return False, response
+        logger.error("share request failed for sender entity {} with status code {} and response {}".format(self_id,s,response.text))
+        return False, response
 
 # Bind 
 def bind(self_id, apikey, entity_id, stream):
     """ Bind to a specified entity or stream.
-    self_id   : the id of the entity sending the bind request
-    apikey    : apikey of the entity sending the bind request
-    entity_id : id of the target entity to which we wish to bind
-    stream    : stream of the target entity to which we wish to bind
+
+    Arguments:
+        self_id   : the id of the entity sending the bind request
+        apikey    : apikey of the entity sending the bind request
+        entity_id : id of the target entity to which we wish to bind
+        stream    : stream of the target entity to which we wish to bind
     """
 
     if stream!=None:
@@ -153,37 +178,32 @@ def bind(self_id, apikey, entity_id, stream):
     response = requests.get(url=bind_url, headers=bind_headers, verify=False)
     s = response.status_code
     if( s == 200):
-            return True, response
+        return True, response
     else:
-            print ("ERROR: Bind request failed for sender entity",self_id,"with status code",s,"and response", response.text)
-            return False, response
+        logger.error("bind request failed for sender entity {} with status code {} and response {}".format(self_id,s,response.text))
+        return False, response
 
 
 
 
 #=================================================
-import time
-
-
 # Testbench
-
-    
+#=================================================
+import time
    
 def run_test():
 
     try:
 
         # Register device1
-        print("REGISTER: Registering device1: ",end=''),
         success, device1_apikey = register("device1")
         assert(success)
-        print("successful. apikey = ",device1_apikey)
+        print("REGISTER: Registering device1 successful. apikey = {}".format(device1_apikey))
         
         # Register app1
-        print("REGISTER: Registering app1: ",end=''),
         success, app1_apikey = register("app1")
         assert(success)
-        print("successful. apikey = ",app1_apikey)
+        print("REGISTER: Registering app1 successful. apikey = {}".format(app1_apikey))
         
    
 
@@ -257,32 +277,12 @@ def run_test():
         return 
   
 
-def run_test_registration_deregistration():
-
-    try:
-        # Register device1
-        print("REGISTER: Registering device1: ",end=''),
-        success, device1_apikey = register("device1")
-        print("success = ",success, "apikey = ",device1_apikey)
-        
-        # Register app1
-        print("REGISTER: Registering app1: ",end=''),
-        success, app1_apikey = register("app1")
-        print("success = ",success, "apikey = ",app1_apikey)
-    
-    finally: 
-        # De-register device1
-        print("DE-REGISTER: De-registering device1: ",end=''),
-        success = deregister("device1")
-        print("success = ",success)
-        
-        # De-register app1
-        print("DE-REGISTER: De-registering app1: ",end=''),
-        success = deregister("app1")
-        print("success = ",success)
-        return 
-
-
-    
+   
 if __name__=='__main__':
+    
+    logging.basicConfig(level=logging.DEBUG)
+    # suppress debug messages from other modules used.
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    
     run_test()

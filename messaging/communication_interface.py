@@ -18,12 +18,12 @@ import threading
 from queue import Queue
 import json
 
+import logging
+logger = logging.getLogger(__name__)
+
 # routines for communicating with the ideam middleware
 # and setting up registrations and permissions.
 import ideam_messaging
-
-# lock to serialize console output
-print_lock = threading.Lock()
 
 
 class CommunicationInterface(object):
@@ -46,10 +46,6 @@ class CommunicationInterface(object):
         self.stream=stream # stream (protected/public/configuration/notify etc)
         self.apikey = apikey # apikey
         
-        # verbosity settings.
-        # print stuff to console when verbose is True.
-        self.verbose = True
-
         # some useful variables
         self.name = self.parent_entity_name + "." + self.interface_name
         self.message_count =0
@@ -64,17 +60,12 @@ class PublishInterface(CommunicationInterface):
         self.thread = threading.Thread(target=self.behavior)
         self.thread.daemon = True
         self.thread.start()
-        
-        if self.verbose:
-            with print_lock:
-                print("Thread",self.name,"created.")
+        logger.debug("thread {} created.".format(self.name))
     
     # function to stop the thread from outside
     def stop(self):
         self.stop_event.set()
-        if self.verbose:
-            with print_lock:
-                print("Thread",self.name,"stopped.")
+        logger.debug("thread {} stopped.".format(self.name))
 
     # check if the thread was stopped.
     def stopped(self):
@@ -87,9 +78,7 @@ class PublishInterface(CommunicationInterface):
             # send the message to the middleware
             success = ideam_messaging.publish(self.target_entity_name, self.stream, self.apikey, msg)
             assert(success)
-            if self.verbose:
-                with print_lock:
-                    print("Thread",self.name,"published message",msg)
+            logger.debug("thread {} published a message: {}".format(self.name, msg))
             self.message_count +=1
             self.queue.task_done()
 
@@ -106,16 +95,12 @@ class SubscribeInterface(CommunicationInterface):
         self.thread = threading.Thread(target=self.behavior)
         self.thread.daemon = True
         self.thread.start()
-        if self.verbose:
-            with print_lock:
-                print("Thread",self.name,"created.")
+        logger.debug("thread {} created.".format(self.name))
     
     # function to stop the thread from outside
     def stop(self):
         self.stop_event.set()
-        if self.verbose:
-            with print_lock:
-                print("Thread",self.name,"stopped.")
+        logger.debug("thread {} stopped.".format(self.name))
 
     # check if the thread was stopped.
     def stopped(self):
@@ -133,9 +118,7 @@ class SubscribeInterface(CommunicationInterface):
                 # push the message into the queue
                 self.queue.put(entry)
                 self.message_count += 1
-                if self.verbose:
-                    with print_lock:
-                        print("Thread",self.name,"received msg = ",entry)
+                logger.debug("thread {} received a message: {}".format(self.name,entry))
 
 
 
@@ -145,6 +128,12 @@ import time
 
 if __name__=='__main__':
     
+    # logging settings:
+    logging.basicConfig(level=logging.DEBUG)
+    # suppress debug messages from other modules used.
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
     devices = ["dev"]
     apps =  ["app"]
 
