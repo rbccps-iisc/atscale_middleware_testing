@@ -111,7 +111,7 @@ class SubscribeInterface(CommunicationInterface):
         while not self.stop_event.wait(timeout=self.polling_interval):
             # subscribe from middleware
             success, response = ideam_messaging.subscribe(self_id=self.target_entity_name,stream=self.stream, 
-                apikey=self.apikey, max_entries=100)
+                apikey=self.apikey, max_entries=1000)
             assert(success)
             r = response.json()
             for entry in r:

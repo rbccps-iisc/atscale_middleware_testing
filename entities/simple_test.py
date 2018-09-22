@@ -38,8 +38,8 @@ def do_setup():
     
     print("Setting up registrations and permissions...")
     
-    NUM_DEVICES = 1
-    NUM_APPS = 1
+    NUM_DEVICES = 2
+    NUM_APPS = 2
 
     devices = ["dev"+str(i) for i in range(NUM_DEVICES)]
     apps =  ["app"+str(i) for i in range(NUM_APPS)]
@@ -78,8 +78,8 @@ def run_test():
     registered_entities = c.registered_entities
     # create a subset of the list of devices and apps
     # for testing:
-    NUM_DEVICES = 1
-    NUM_APPS = 1
+    NUM_DEVICES = 2
+    NUM_APPS = 2
     devices = ["dev"+str(i) for i in range(NUM_DEVICES)]
     apps =  ["app"+str(i) for i in range(NUM_APPS)]
     system_description = {  "entities" : devices+apps,
@@ -115,7 +115,6 @@ def run_test():
             a = p[0]    # app name
             d = p[1]    # device name
             perm = p[2] # permission
-
             if(perm=="write" or perm=="read-write"):
                 app_instances[a].add_device_to_be_controlled(d)
 
@@ -129,7 +128,7 @@ def run_test():
         time_printer = env.process(print_time(env))
 
         # run simulation for a specified amount of time
-        simulation_time=15
+        simulation_time=20
         print("Running simulation for",simulation_time,"seconds ....")
         env.run(simulation_time)
 

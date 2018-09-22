@@ -63,7 +63,7 @@ class Device(object):
     def behavior(self):
         
         
-        while (self.published_count<=10): # the main loop.
+        while (self.published_count<10): # the main loop.
             try:
                 if self.state == "NORMAL":
                     # periodically publish sensor data
@@ -137,9 +137,11 @@ class Device(object):
                 unread_messages.append(msg)
             return unread_messages 
        
-    # end the subscription thread
+    # IMPORTANT!:
+    # stop all communication threads.
     def end(self):
         self.subscribe_thread.stop()
+        self.publish_thread.stop()
         logger.info("SIM_TIME:{} ENTITY:{} stopping. Collected {} messages in total.".format(self.env.now, self.name, self.subscribed_count))
         for msg in self.received_messages:
             logger.debug("\t MESSAGE:{}".format(msg))

@@ -76,7 +76,7 @@ class App(object):
                         device = m["data"]["sender"]
                         # send a "RESUME" command to this device
                         logger.info("SIM_TIME:{} ENTITY:{} received a FAULT status from device {}".format(
-                        self.env.now, self.name, device))
+                            self.env.now, self.name, device))
                         self.send_control_message(device, json.dumps({"sender": self.name, "command":"RESUME"}))
                 
             # now check again sometime later.
@@ -84,9 +84,9 @@ class App(object):
 
             # at time t=3, send a dummy control message 
             # to all the devices controlled by this app:
-            if(self.env.now == 3):
-                for d in self.controlled_devices:
-                    self.send_control_message(d, json.dumps({"sender": self.name, "command":"DUMMY_COMMAND"}))
+            #if(self.env.now == 3):
+            #    for d in self.controlled_devices:
+            #        self.send_control_message(d, json.dumps({"sender": self.name, "command":"DUMMY_COMMAND"}))
 
 
     def add_device_to_be_controlled(self,device_name):
@@ -119,10 +119,14 @@ class App(object):
                 unread_messages.append(msg)
             return unread_messages 
 
-    # end the subscription thread
-    # and print all data collected so far.
+    # IMPORTANT! :
+    # stop all communication threads
+    # for a proper cleanup.
     def end(self):
         self.subscribe_thread.stop()
+        for d in self.controlled_devices:
+            publish_thread = self.controlled_devices[d]
+            publish_thread.stop()
         logger.info("SIM_TIME:{} ENTITY:{} stopping. Collected {} messages in total.".format(self.env.now, self.name, self.subscribed_count))
         for msg in self.received_messages:
             logger.debug("\t MESSAGE:{}".format(msg))
