@@ -64,10 +64,17 @@ def do_setup():
 # a dummy SimPy process to print simulation time and real time
 def print_time(env):
     start_real_time = time.perf_counter()
+    max_overshoot = 0.0
+    PERIOD = 1
     while True:
         elapsed_real_time = round(time.perf_counter() - start_real_time,2)
-        logger.info("SIM_TIME:{} REAL_TIME:{}".format(env.now, elapsed_real_time))
-        yield env.timeout(1)
+        sim_time = float(env.now)
+        logger.info("SIM_TIME:{} REAL_TIME:{}".format(sim_time, elapsed_real_time))
+        if ( (elapsed_real_time - sim_time) >= float(PERIOD)):
+            overshoot = elapsed_real_time - sim_time
+            max_overshoot = max(overshoot, max_overshoot)
+            logger.warning("Simulation time overshot real-time by {} s. Max_overshoot so far was {} s.".format(overshot,max_overshoot))
+        yield env.timeout(PERIOD)
 
         
 def run_test():
@@ -157,7 +164,7 @@ def do_deregistrations():
 if __name__=='__main__':
     
     # logging settings:
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     # suppress debug messages from other modules used.
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
