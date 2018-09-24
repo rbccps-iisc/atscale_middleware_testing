@@ -88,8 +88,9 @@ def run_test():
     # run the simulation
     try:
         # create a SimPy Environment:
-        # real-time:
-        env = simpy.rt.RealtimeEnvironment(factor=1, strict=True)
+        # real-time, but without strict checking:
+        env = simpy.rt.RealtimeEnvironment(factor=1, strict=False)
+
         # as-fast-as-possible (non real-time):
         # env=simpy.Environment()
 
