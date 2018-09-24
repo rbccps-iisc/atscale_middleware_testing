@@ -32,14 +32,14 @@ from fault_injector import FaultInjector
 CONFIG_MODULE = "simple_test_config"
 CONFIG_FILE_NAME = CONFIG_MODULE+".py"
 
+NUM_DEVICES = 2
+NUM_APPS = 2
 
 # register entities and store the info in a file
 def do_setup():
     
     print("Setting up registrations and permissions...")
     
-    NUM_DEVICES = 2
-    NUM_APPS = 2
 
     devices = ["dev"+str(i) for i in range(NUM_DEVICES)]
     apps =  ["app"+str(i) for i in range(NUM_APPS)]
@@ -78,8 +78,6 @@ def run_test():
     registered_entities = c.registered_entities
     # create a subset of the list of devices and apps
     # for testing:
-    NUM_DEVICES = 2
-    NUM_APPS = 2
     devices = ["dev"+str(i) for i in range(NUM_DEVICES)]
     apps =  ["app"+str(i) for i in range(NUM_APPS)]
     system_description = {  "entities" : devices+apps,
