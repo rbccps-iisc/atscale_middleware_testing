@@ -80,7 +80,6 @@ class PublishInterface(CommunicationInterface):
             assert(success)
             logger.debug("thread {} published a message: {}".format(self.name, msg))
             self.message_count +=1
-            self.queue.task_done()
 
 
 class SubscribeInterface(CommunicationInterface):

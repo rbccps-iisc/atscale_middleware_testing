@@ -177,7 +177,7 @@ if __name__=='__main__':
     NUM_APPS = 2
     
     # logging settings:
-    logging.basicConfig(level=logging.INFO) # set level=logging.INFO when num. of entities is large.
+    logging.basicConfig(level=logging.DEBUG) # set level=logging.INFO when num. of entities is large.
     
     do_setup(NUM_DEVICES, NUM_APPS) # do entity registrations and save apikeys in file <CONFIG_FILE_NAME>
     run_test(NUM_DEVICES, NUM_APPS) # run simulation
