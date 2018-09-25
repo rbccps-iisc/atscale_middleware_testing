@@ -3,13 +3,13 @@
 At-scale testing of the ideam middleware using simulated entities.
 
 ## REQUIREMENTS ##
-* python3 
+* Python3 
 * SimPy (https://simpy.readthedocs.io/en/latest/) version > 3.0.10
-* ideam middleware (https://github.com/rbccps-iisc/ideam) installed on local machine or remote server
+* IDEAM middleware (https://github.com/rbccps-iisc/ideam) installed on the local machine or a remote server
 
 ## USAGE ##
 
-* The routines for communicating with the ideam middleware are present at /messaging/ideam_messaging.py. The IP address of the middleware installation is "localhost" by default. This can be changed in the same file.
+* The routines for communicating with the IDEAM middleware are present at /messaging/ideam_messaging.py. The IP address of the middleware installation is "localhost" by default. This can be changed in the same file.
 
 * To run basic tests for communication with the middleware:
 ```console
@@ -18,7 +18,7 @@ At-scale testing of the ideam middleware using simulated entities.
 	$ python3 setup_entities.py
 	$ python3 communication_interface.py
 ```
-* To run tests with app and device models simulated using SimPY:
+* To run tests with simulated devices and apps running in a SimPy environment:
 ``` console
 	$ cd entities
 	$ python3 simple_test.py
