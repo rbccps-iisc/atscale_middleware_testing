@@ -14,8 +14,15 @@ import simpy
 import time
 import json
 import simpy.rt
+
+# logging
 import logging
 logger = logging.getLogger(__name__)
+# suppress debug messages from other modules used.
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("communication_interface").setLevel(logging.WARNING)
+
 
 
 # routines for setting up entities and permissions in the middleware
@@ -32,17 +39,14 @@ from fault_injector import FaultInjector
 CONFIG_MODULE = "simple_test_config"
 CONFIG_FILE_NAME = CONFIG_MODULE+".py"
 
-NUM_DEVICES = 2
-NUM_APPS = 2
 
 # register entities and store the info in a file
-def do_setup():
+def do_setup(num_devices, num_apps):
     
     print("Setting up registrations and permissions...")
     
-
-    devices = ["dev"+str(i) for i in range(NUM_DEVICES)]
-    apps =  ["app"+str(i) for i in range(NUM_APPS)]
+    devices = ["dev"+str(i) for i in range(num_devices)]
+    apps =  ["app"+str(i) for i in range(num_apps)]
     system_description = {  "entities" : devices+apps,
                             "permissions" : [(a,d,"read-write") for a in apps for d in devices]
                         }
@@ -59,7 +63,8 @@ def do_setup():
             f.write("\napps= %s"%apps)
             f.write("\nregistered_entities= %s"%registered_entities)
         print("...done.")
-      
+
+
 
 # a dummy SimPy process to print simulation time and real time
 def print_time(env):
@@ -70,14 +75,17 @@ def print_time(env):
         elapsed_real_time = round(time.perf_counter() - start_real_time,2)
         sim_time = float(env.now)
         logger.info("SIM_TIME:{} REAL_TIME:{}".format(sim_time, elapsed_real_time))
+        # check if the real-time overshot simulation time 
+        # by more than <PERIOD> seconds.
         if ( (elapsed_real_time - sim_time) >= float(PERIOD)):
             overshoot = elapsed_real_time - sim_time
             max_overshoot = max(overshoot, max_overshoot)
-            logger.warning("Simulation time overshot real-time by {} s. Max_overshoot so far was {} s.".format(overshot,max_overshoot))
+            logger.warning("Simulation time overshot real-time by {} s. Max_overshoot so far was {} s.".format(overshoot,max_overshoot))
         yield env.timeout(PERIOD)
 
-        
-def run_test():
+
+
+def run_test(num_devices, num_apps):
     
     # read the apikeys for pre-registered devices from file  
     import importlib
@@ -85,8 +93,8 @@ def run_test():
     registered_entities = c.registered_entities
     # create a subset of the list of devices and apps
     # for testing:
-    devices = ["dev"+str(i) for i in range(NUM_DEVICES)]
-    apps =  ["app"+str(i) for i in range(NUM_APPS)]
+    devices = ["dev"+str(i) for i in range(num_devices)]
+    apps =  ["app"+str(i) for i in range(num_apps)]
     system_description = {  "entities" : devices+apps,
                             "permissions" : [(a,d,"read-write") for a in apps for d in devices]
                         }
@@ -154,24 +162,24 @@ def do_deregistrations():
     import importlib
     c = importlib.import_module(CONFIG_MODULE, package=None)
     registered_entities = c.registered_entities 
-
     print("---------------------")
     print("De-registering all entities")
     setup_entities.deregister_entities(registered_entities)
     print("---------------------")
 
 
+
+
 if __name__=='__main__':
     
-    # logging settings:
-    logging.basicConfig(level=logging.INFO)
-    # suppress debug messages from other modules used.
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("communication_interface").setLevel(logging.WARNING)
-
-    do_setup()
-    run_test()
-    do_deregistrations()
+    # settings:
+    NUM_DEVICES = 2
+    NUM_APPS = 2
     
+    # logging settings:
+    logging.basicConfig(level=logging.INFO) # set level=logging.INFO when num. of entities is large.
+    
+    do_setup(NUM_DEVICES, NUM_APPS) # do entity registrations and save apikeys in file <CONFIG_FILE_NAME>
+    run_test(NUM_DEVICES, NUM_APPS) # run simulation
+    do_deregistrations() # de-register all entries saved in file <CONFIG_FILE_NAME>
 
