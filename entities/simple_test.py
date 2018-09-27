@@ -41,12 +41,19 @@ CONFIG_FILE_NAME = CONFIG_MODULE+".py"
 
 
 # register entities and store the info in a file
-def do_setup(num_devices, num_apps):
+def do_setup(num_devices, num_apps, logging_level):
+    """ 
+    Register the given number of device and app entities
+    with the middleware and set-up permissions between them.
+    """
+    
+    # logging settings:
+    logging.basicConfig(level=logging_level) 
     
     print("Setting up registrations and permissions...")
     
-    devices = ["dev"+str(i) for i in range(num_devices)]
-    apps =  ["app"+str(i) for i in range(num_apps)]
+    devices = ["device"+str(i) for i in range(num_devices)]
+    apps =  ["application"+str(i) for i in range(num_apps)]
     system_description = {  "entities" : devices+apps,
                             "permissions" : [(a,d,"read-write") for a in apps for d in devices]
                         }
@@ -85,19 +92,39 @@ def print_time(env):
 
 
 
-def run_test(num_devices, num_apps):
+def run_simulation(num_devices, num_apps, simulation_time,logging_level):
+    """
+    Run simulation with <num_devices> device instances and
+    <num_apps> app instances for <simulation_time> seconds.
+    The logging_level can be logging.DEBUG or logging.INFO etc.
+    This function assumes that all the devices and apps 
+    have been pre-registered with the middleware 
+    and their apikeys have been written into a file.
+    """
+    # logging settings:
+    logging.basicConfig(level=logging_level) 
     
     # read the apikeys for pre-registered devices from file  
     import importlib
     c = importlib.import_module(CONFIG_MODULE, package=None)
     registered_entities = c.registered_entities
-    # create a subset of the list of devices and apps
-    # for testing:
-    devices = ["dev"+str(i) for i in range(num_devices)]
-    apps =  ["app"+str(i) for i in range(num_apps)]
+    
+    # the list of devices and apps used for the simulation
+    # can be a subset of those registered.
+    assert(num_devices>0)
+    assert(num_apps>0)
+    assert(simulation_time>0)
+
+    devices = c.devices[0:num_devices]
+    apps = c.apps[0:num_apps]
+    perm = c.system_description["permissions"]
+    
+    # build the system descriptions again
     system_description = {  "entities" : devices+apps,
-                            "permissions" : [(a,d,"read-write") for a in apps for d in devices]
+                            "permissions" : [(a,d,p) for a,d,p in perm if ((a in apps) and (d in devices))]
                         }
+    
+    
     # run the simulation
     try:
         # create a SimPy Environment:
@@ -142,7 +169,8 @@ def run_test(num_devices, num_apps):
         time_printer = env.process(print_time(env))
 
         # run simulation for a specified amount of time
-        simulation_time=20
+        assert(simulation_time > 0)
+        assert(isinstance(simulation_time, int))
         print("Running simulation for",simulation_time,"seconds ....")
         env.run(simulation_time)
 
@@ -156,30 +184,26 @@ def run_test(num_devices, num_apps):
         print("There was an exception")
         raise
 
-def do_deregistrations():
+def do_deregistrations(logging_level):
+    
+    # logging settings:
+    logging.basicConfig(level=logging_level) 
     
     # read the apikeys etc from a file
     import importlib
     c = importlib.import_module(CONFIG_MODULE, package=None)
     registered_entities = c.registered_entities 
+    
+    
     print("---------------------")
     print("De-registering all entities")
     setup_entities.deregister_entities(registered_entities)
     print("---------------------")
 
 
-
-
 if __name__=='__main__':
-    
-    # settings:
-    NUM_DEVICES = 2
-    NUM_APPS = 2
-    
-    # logging settings:
-    logging.basicConfig(level=logging.DEBUG) # set level=logging.INFO when num. of entities is large.
-    
-    do_setup(NUM_DEVICES, NUM_APPS) # do entity registrations and save apikeys in file <CONFIG_FILE_NAME>
-    run_test(NUM_DEVICES, NUM_APPS) # run simulation
-    do_deregistrations() # de-register all entries saved in file <CONFIG_FILE_NAME>
+    print("---------------------------------------")
+    print(" Please don't run this file directly.")
+    print(" USAGE: $python3 run_simple_test.py")
+    print("---------------------------------------")
 
