@@ -21,7 +21,7 @@ At-scale testing of the ideam middleware using simulated entities.
 * To run tests with simulated devices and apps running in a SimPy environment:
 ``` console
 	$ cd entities
-	$ python3 simple_test.py
+	$ python3 run_simple_test.py
 ```
 ## AUTHOR ##
 	Neha Karanjkar (https://github.com/NehaKaranjkar)
