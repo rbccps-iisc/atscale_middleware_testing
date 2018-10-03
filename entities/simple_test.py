@@ -217,14 +217,12 @@ def cleanup_queued_messages(num_devices, num_apps, logging_level):
     print("Cleaning up queued messages .....")
     time.sleep(1)
     
-    # read the apikeys for pre-registered devices from file  
+    # read the apikeys for pre-registered apps from file  
     import importlib
     c = importlib.import_module(CONFIG_MODULE, package=None)
     registered_entities = c.registered_entities
     
     # the list of devices and apps for the cleanup
-    # assume that the first app has at-least a READ permission
-    # to all devices.
     assert(num_devices>0)
     assert(num_apps>0)
 
@@ -232,15 +230,12 @@ def cleanup_queued_messages(num_devices, num_apps, logging_level):
     apps = c.apps[0:num_apps]
     perm = c.system_description["permissions"]
     
-    # now subscribe from each device
-    for d in devices:
-        this_app = apps[0]
-        dev_id = d
-        stream=None
-        apikey = registered_entities[this_app]
-        success,response = ideam_messaging.subscribe(self_id=dev_id, stream=stream, apikey=apikey, max_entries=10000)
+    # now clear the subscribe queue for each app
+    for a in apps:
+        apikey = registered_entities[a]
+        success,response = ideam_messaging.subscribe(self_id=a, stream=None, apikey=apikey, max_entries=100000)
         if (success==True):
-            logger.debug("Cleaned up {} residual messages for entity {}".format(len(response.json()), dev_id))
+            logger.debug("Cleaned up {} residual messages for app {}".format(len(response.json()), a))
             
 
 

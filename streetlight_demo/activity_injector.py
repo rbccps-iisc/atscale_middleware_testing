@@ -1,8 +1,8 @@
 #!python3
 
-# SimPy model for a fault_injector.
-# The fault_injector injects faults into devices
-# at a predetermined time (via a SimPy interrupt)
+# SimPy model for an activity_injector.
+# This module injects sensor data values and faults into 
+# the device models at a predetermined time. 
 #
 # Author: Neha Karanjkar
 

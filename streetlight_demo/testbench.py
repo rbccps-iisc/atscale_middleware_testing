@@ -30,13 +30,13 @@ sys.path.insert(0, '../messaging')
 import setup_entities
 
 # import the device and app models.
-from simple_device import Device
-from simple_app import App
-from fault_injector import FaultInjector
+from streetlight import Streetlight
+from app import App
+from state_injector import StateInjector
 
 # information (apikeys) of all registered entities are
 # stored in a file for easy re-use.
-CONFIG_MODULE = "simple_test_config"
+CONFIG_MODULE = "registration_info"
 CONFIG_FILE_NAME = CONFIG_MODULE+".py"
 
 
@@ -52,8 +52,8 @@ def do_setup(num_devices, num_apps, logging_level):
     
     print("Setting up registrations and permissions...")
     
-    devices = ["device"+str(i) for i in range(num_devices)]
-    apps =  ["application"+str(i) for i in range(num_apps)]
+    devices = ["sl"+str(i) for i in range(num_devices)]
+    apps =  ["controlapp"+str(i) for i in range(num_apps)]
     system_description = {  "entities" : devices+apps,
                             "permissions" : [(a,d,"read-write") for a in apps for d in devices]
                         }
@@ -133,15 +133,16 @@ def run_simulation(num_devices, num_apps, simulation_time,logging_level):
 
         # as-fast-as-possible (non real-time):
         # env=simpy.Environment()
+        from collections import OrderedDict
 
-        device_instances={}
-        app_instances={}
+        device_instances=OrderedDict()
+        app_instances=OrderedDict()
 
         # populate the environment with devices.
         for d in devices:
             name = d
             apikey = registered_entities[d]
-            device_instance = Device(env=env,name=d,apikey=apikey)
+            device_instance = Streetlight(env=env,name=d,apikey=apikey)
             device_instances[d]=device_instance
         
         # populate the environment with apps.
@@ -158,12 +159,24 @@ def run_simulation(num_devices, num_apps, simulation_time,logging_level):
             perm = p[2] # permission
             if(perm=="write" or perm=="read-write"):
                 app_instances[a].add_device_to_be_controlled(d)
+        
+        # Create a state injector
+        state_inj = StateInjector(env=env)
+        state_inj.device_instances = device_instances
 
-        # Create a fault injector 
-        # that injects faults into devices
-        fault_inj = FaultInjector(env=env)
-        fault_inj.device_instances = device_instances
+        # let each streetlight maintain a 
+        # list of its neighbouring streetlights
+        neighbourhood_forward = 4
+        neighbourhood_backward = 0
 
+        devs = list(device_instances.values())
+        for i in range(len(devs)):
+            neighbourhood=[]
+            for j in range(i-neighbourhood_backward,i+neighbourhood_forward):
+                if(j>=0 and j!=i and j<len(devs)):
+                    neighbourhood.append(devs[j])
+            devs[i].neighbouring_streetlights=neighbourhood
+             
         # create a dummy simpy process that simply prints the
         # simulation time and real time.
         time_printer = env.process(print_time(env))
@@ -199,6 +212,45 @@ def do_deregistrations(logging_level):
     print("De-registering all entities")
     setup_entities.deregister_entities(registered_entities)
     print("---------------------")
+
+
+import ideam_messaging
+
+def cleanup_queued_messages(num_devices, num_apps, logging_level):
+    """
+    Remove all messages in the queues for the devices
+    by subscribing.
+    """
+
+    # logging settings:
+    logging.basicConfig(level=logging_level) 
+    
+    print("---------------------------------------")
+    print("Cleaning up queued messages .....")
+    time.sleep(1)
+    
+    # read the apikeys for pre-registered devices from file  
+    import importlib
+    c = importlib.import_module(CONFIG_MODULE, package=None)
+    registered_entities = c.registered_entities
+    
+    # the list of devices and apps for the cleanup
+    assert(num_devices>0)
+    assert(num_apps>0)
+
+    devices = c.devices[0:num_devices]
+    apps = c.apps[0:num_apps]
+    perm = c.system_description["permissions"]
+    
+     # now clear the subscribe queue for each app
+    for a in apps:
+        apikey = registered_entities[a]
+        success,response = ideam_messaging.subscribe(self_id=a, stream=None, apikey=apikey, max_entries=100000)
+        if (success==True):
+            logger.debug("Cleaned up {} residual messages for app {}".format(len(response.json()), a))
+            
+
+   
 
 
 if __name__=='__main__':

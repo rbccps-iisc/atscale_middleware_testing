@@ -24,7 +24,7 @@ class PlotStreetlights(object):
         self.objects=[] # handles to circle plots representing objects
         
         # generate a canvas
-        fig, ax = plt.subplots(figsize=(5,5))
+        fig, ax = plt.subplots(figsize=(6,6))
         ax.set(xlim=(0,1),ylim=(0,1))
         
         plt.ion() # enable plot to be updated dynamically      
@@ -57,6 +57,8 @@ class PlotStreetlights(object):
         ambient_light_level = min(0.999, max(0.0001,ambient_light_level))
         cmap = cm.get_cmap('bone')
         ax.set_facecolor(cmap(ambient_light_level))
+        # insert text to indicate ambient light
+        self.text=ax.text(0.5, 0.9, "ambient_light_level = {:.2f}".format(ambient_light_level), backgroundcolor="white",horizontalalignment='center')
         
         # Now draw the light orbs according 
         # to the light intensities
@@ -74,23 +76,24 @@ class PlotStreetlights(object):
             ax.add_artist(circle3)
             light = [circle1, circle2, circle3]
             self.lights.append(light)
-            
+         
         # Indicate activity using a circle
         # for each object detected.
         self.base_obj_radius=0.02
         for i in range(N):
-                obj = plt.Circle((x[i], y_object), 0.0*self.base_obj_radius, color='olive',alpha=1,zorder=5)
+                obj = plt.Circle((x[i], y_object), 0.0*self.base_obj_radius, color='violet',alpha=1,zorder=5)
                 ax.add_artist(obj)
                 self.objects.append(obj)
         fig.canvas.draw()
+        plt.show()
     
     def update_plot(self, intensities, activities, ambient_light_level):
         
         """
         Update plot
         """
-        assert(len(intensities)==N)
-        assert(len(activities)==N)
+        assert(len(intensities)==self.N)
+        assert(len(activities)==self.N)
         assert(self.fig!=None)
         assert(self.ax !=None)
         
@@ -98,44 +101,49 @@ class PlotStreetlights(object):
         # bound the value between (0.0001, 0.999)
         ambient_light_level = min(0.999, max(0.0001,ambient_light_level))
         cmap = cm.get_cmap('bone')
-        self.ax.set_facecolor(cmap(ambient_light_level))
+        self.ax.set_facecolor(cmap(ambient_light_level*0.9))
+        self.text.set_text("ambient_light_level = {:.2f}".format(ambient_light_level))
         
         # Update the light orbs according to the intensities
         base_light_radius = self.base_light_radius
-        for i in range(N):
+        for i in range(self.N):
             light =self.lights[i]
             light[0].set_radius(intensities[i]* base_light_radius)
             light[1].set_radius(intensities[i]* base_light_radius*0.5)
             light[2].set_radius(intensities[i]* base_light_radius*0.2)
             
         # Update activity for each object detected.
-        for i in range(N):
+        for i in range(self.N):
                 obj = self.objects[i]
                 # check that activity value is either 0 or 1
                 assert(activities[i]==0 or activities[i]==1)
                 obj.set_radius(activities[i]*self.base_obj_radius)
         self.fig.canvas.draw()
 
-N = 5
-intensities=[0 for i in range (N)]
-activities=[0 for i in range(N)]
-ambient_light_level = 1
+if __name__=='__main__':
+    print("---------------------------------------")
+    print(" Streetlight visualization")
 
-# draw the first plot
-P = PlotStreetlights(N, intensities, activities, ambient_light_level)
-plt.show()
+    N = 5
+    intensities=[0 for i in range (N)]
+    activities=[0 for i in range(N)]
+    ambient_light_level = 1
 
-# create an animation 
-# by updating the plot periodically
-t_max=100
-for t in range(t_max):
-    # wait for a while
-    time.sleep(0.025)
-    intensities = [t/t_max for i in range (N)]
-    activities = [0 for i in range(N)]
-    activities[t%N]=1
-    ambient_light_level = 1 - t/t_max
-    P.update_plot(intensities,activities,ambient_light_level)
+    # draw the first plot
+    P = PlotStreetlights(N, intensities, activities, ambient_light_level)
+    plt.show()
 
-print("done")
-time.sleep(2)
+    # create an animation 
+    # by updating the plot periodically
+    t_max=100
+    for t in range(t_max):
+        # wait for a while
+        time.sleep(0.025)
+        intensities = [t/t_max for i in range (N)]
+        activities = [0 for i in range(N)]
+        activities[t%N]=1
+        ambient_light_level = 1 - t/t_max
+        P.update_plot(intensities,activities,ambient_light_level)
+
+    print("done")
+    time.sleep(2)
