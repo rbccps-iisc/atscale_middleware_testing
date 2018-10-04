@@ -53,7 +53,7 @@ def do_setup(num_devices, num_apps, logging_level):
     print("Setting up registrations and permissions...")
     
     devices = ["sl"+str(i) for i in range(num_devices)]
-    apps =  ["controlapp"+str(i) for i in range(num_apps)]
+    apps =  ["appsl"+str(i) for i in range(num_apps)]
     system_description = {  "entities" : devices+apps,
                             "permissions" : [(a,d,"read-write") for a in apps for d in devices]
                         }
