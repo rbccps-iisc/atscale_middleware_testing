@@ -200,22 +200,22 @@ def run_test():
         assert(success)
         print("REGISTER: Registering device1 successful. apikey = {}".format(device1_apikey))
         
-        # Register app1
-        success, app1_apikey = register("app1")
+        # Register application1
+        success, application1_apikey = register("application1")
         assert(success)
-        print("REGISTER: Registering app1 successful. apikey = {}".format(app1_apikey))
+        print("REGISTER: Registering application1 successful. apikey = {}".format(application1_apikey))
         
    
 
-        # Let app1 follow device1 (read)
-        success = follow("app1", app1_apikey,"device1","read")
+        # Let application1 follow device1 (read)
+        success = follow("application1", application1_apikey,"device1","read")
         assert(success)
-        print("FOLLOW: app1 sent a request to follow(read) device1")
+        print("FOLLOW: application1 sent a request to follow(read) device1")
         
-        # Let app1 follow device1 (write)
-        success = follow("app1", app1_apikey,"device1","write")
+        # Let application1 follow device1 (write)
+        success = follow("application1", application1_apikey,"device1","write")
         assert(success)
-        print("FOLLOW: app1 sent a request to follow(write) device1")
+        print("FOLLOW: application1 sent a request to follow(write) device1")
 
         # Get device1 to check all follow requests forwarded to it
         # and approve each request
@@ -232,18 +232,18 @@ def run_test():
                 assert(share_status)
                 print ("SHARE: device1 sent a share request for entity",requesting_entity,"for permission=",permission_sought)
         
-        # Get app1 to check for notifications (responses to its follow request)
-        success, response = subscribe("app1","notify", app1_apikey,1)
+        # Get application1 to check for notifications (responses to its follow request)
+        success, response = subscribe("application1","notify", application1_apikey,1)
         assert(success)
         r = response.json()
         assert("Approved" in response.text)
-        print ("FOLLOW: app1's follow request was Approved.")
+        print ("FOLLOW: application1's follow request was Approved.")
                 
-        # Get app1 to bind to device1's protected stream
-        success, response = bind("app1", app1_apikey, "device1","protected")
+        # Get application1 to bind to device1's protected stream
+        success, response = bind("application1", application1_apikey, "device1","protected")
         assert(success)
         assert("Bind Queue OK" in response.text)
-        print ("BIND: app1 sent a bind request for device1.protected. response=",response.text)
+        print ("BIND: application1 sent a bind request for device1.protected. response=",response.text)
 
         
         # Get device1 to publish some stuff.
@@ -254,10 +254,10 @@ def run_test():
             assert(success)
         
 
-        # Get app1 to print the data it has susbscribed to
-        success, response = subscribe(self_id="app1",stream=None, apikey=app1_apikey, max_entries=200)
+        # Get application1 to print the data it has susbscribed to
+        success, response = subscribe(self_id="application1",stream=None, apikey=application1_apikey, max_entries=200)
         assert(success)
-        print ("SUBSCRIBE: app1 received the following data from device1:")
+        print ("SUBSCRIBE: application1 received the following data from device1:")
         r = response.json()
         for entry in r:
             print(entry)
@@ -270,9 +270,9 @@ def run_test():
         success = deregister("device1")
         print("success = ",success)
         
-        # De-register app1
-        print("DE-REGISTER: De-registering app1: ",end=''),
-        success = deregister("app1")
+        # De-register application1
+        print("DE-REGISTER: De-registering application1: ",end=''),
+        success = deregister("application1")
         print("success = ",success)
         return 
   

@@ -134,8 +134,8 @@ if __name__=='__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-    devices = ["dev"]
-    apps =  ["app"]
+    devices = ["device"]
+    apps =  ["application"]
 
     system_description = {  "entities" : devices+apps,
                             "permissions" : [(a,d,"read") for a in apps for d in devices]
@@ -147,12 +147,12 @@ if __name__=='__main__':
         success, registered_entities = setup_entities.setup_entities(system_description)
         assert(success)
         
-        # create two publish threads for "dev"
-        p1 = PublishInterface("p1","dev","dev","protected",registered_entities["dev"])
-        p2 = PublishInterface("p2","dev","dev","protected",registered_entities["dev"])
+        # create two publish threads for "device"
+        p1 = PublishInterface("p1","device","device","protected",registered_entities["device"])
+        p2 = PublishInterface("p2","device","device","protected",registered_entities["device"])
         
-        # create one subscribe thread for "app"
-        s1 = SubscribeInterface("s1","app","app", None, registered_entities["app"])
+        # create one subscribe thread for "application"
+        s1 = SubscribeInterface("s1","application","application", None, registered_entities["application"])
 
         # push something into the publish queue
         NUM_MSG = 10

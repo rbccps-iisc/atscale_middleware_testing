@@ -159,7 +159,7 @@ if __name__=='__main__':
     
     # devices and apps:
     devices = ["device"+str(i) for i in range(4)]
-    apps = ["app"+str(i) for i in range (1)]
+    apps = ["application"+str(i) for i in range (1)]
 
     system_description = {  "entities"       : devices+apps,
                             "permissions"   : [ (a,d,"read") for a in apps for d in devices ]
