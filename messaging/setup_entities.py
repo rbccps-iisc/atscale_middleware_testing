@@ -21,7 +21,7 @@
 # Author: Neha Karanjkar
 
 from __future__ import print_function 
-from ideam_messaging import *
+import ideam_messaging
 import logging
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def deregister_entities(list_of_entity_names):
     deregisters them one-by-one.
     """
     for entity in list_of_entity_names:
-        success = deregister(entity)
+        success = ideam_messaging.deregister(entity)
         if(success):
             logger.debug("DE-REGISTER: de-registering {} successful.".format(entity))
         assert(success)
@@ -85,7 +85,7 @@ def setup_entities(system_description):
         
         # Now register all entities:
         for i in entities:
-            success, apikey = register(i)
+            success, apikey = ideam_messaging.register(i)
             assert (success)
             logger.debug("REGISTER: registering entity {} successful. apikey ={} ".format(i,apikey))
             registered_entities[i]=apikey
@@ -101,38 +101,30 @@ def setup_entities(system_description):
             target_entity_apikey = registered_entities[target_entity]
             
             # send a follow request
-            success = follow(requestor, requestor_apikey, target_entity, permission)
+            success = ideam_messaging.follow(requestor, requestor_apikey, target_entity, permission)
             assert(success)
             logger.debug("FOLLOW: {} sent a follow request to {} for permission {}".format(requestor, target_entity, permission))
-            time.sleep(0.1)
             
             # get the target_entity to check the follow request
-            success, response = subscribe(target_entity,"follow", target_entity_apikey,1)
+            success, messages = ideam_messaging.get(apikey=target_entity_apikey, queue=target_entity+".follow", max_entries=1)
             assert(success)
-            r = response.json()
-            assert (len(r)>0) and ("data" in r[0])
-            assert("requestor" in r[0]["data"])
-            assert("permission" in r[0]["data"])
-
-            req = r[0]
-            requesting_entity = req["data"]["requestor"]
-            permission_sought = req["data"]["permission"]
+            requesting_entity = messages[0]["requestor"]
+            permission_sought = messages[0]["permission"]
             logger.debug("FOLLOW: {} received a follow request from {} for permission {}".format(target_entity,requesting_entity,permission_sought))
 
             # get the target entitity to approve the follow request using "share" 
-            success, response = share(target_entity,target_entity_apikey, requesting_entity, permission_sought)
+            success = ideam_messaging.share(target_entity,target_entity_apikey, requesting_entity, permission_sought)
             assert(success)
             logger.debug("SHARE: {} sent a share request for entity {} for permission {}".format(target_entity, requesting_entity,permission_sought)) 
             
             # get the requestor to check for the follow notification
-            success, response = subscribe(requestor,"notify", requestor_apikey,1)
+            success, messages = ideam_messaging.get(requestor_apikey, queue=str(requestor)+".notify", max_entries= 1)
             assert(success)
-            r = response.json()
-            assert("Approved" in response.text)
+            assert("Approved" in str(messages))
             logger.debug("FOLLOW: follow request made by {} was approved.".format(requestor))
             
             # get the requestor to bind to the target entity's protected stream
-            success, response = bind(requestor, requestor_apikey, target_entity,"protected")
+            success = ideam_messaging.bind(requestor, requestor_apikey, target_entity,"protected")
             assert(success)
             logger.debug("BIND: {} sent a bind request for {} .".format(requestor, target_entity))
 
@@ -152,13 +144,15 @@ if __name__=='__main__':
     
     # logging settings:
     logging.basicConfig(level=logging.DEBUG)
+    
     # suppress debug messages from other modules used.
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("ideam_messaging").setLevel(logging.WARNING)
  
     
     # devices and apps:
-    devices = ["device"+str(i) for i in range(4)]
+    devices = ["device"+str(i) for i in range(2)]
     apps = ["application"+str(i) for i in range (1)]
 
     system_description = {  "entities"       : devices+apps,
