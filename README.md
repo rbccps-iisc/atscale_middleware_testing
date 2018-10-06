@@ -22,7 +22,7 @@ At-scale testing of the ideam middleware using simulated entities.
 ```
 * To run tests with simulated devices and apps running in a SimPy environment:
 ``` console
-	$ cd simple_entities
+	$ cd entities
 	$ python3 run_simple_test.py
 ```
 * To run the streetlight demo:
