@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, '../messaging')
 import communication_interface
 
+APP_PROTOCOL = "AMQP" # can be either "AMQP" or "HTTP"
 
 class App(object):
     """ 
@@ -41,8 +42,8 @@ class App(object):
         # create a communication interface
         # to get device data from the middleware
         self.subscribe_thread = communication_interface.SubscribeInterface(
-            interface_name="subscribe_thread", parent_entity_name=self.name, 
-            target_entity_name=self.name, stream=None,apikey=apikey)
+            interface_name="subscribe_thread", entity_name=name, 
+            apikey=apikey, exchange=str(self.name), protocol = APP_PROTOCOL)
              
         # dictionary of devices being controlled by this app.
         self.controlled_devices={}
@@ -70,10 +71,10 @@ class App(object):
 
                 # check if any device sent a "FAULT" status
                 for m in msgs:
-                    if "status" in m["data"]:
-                        assert(m["data"]["status"]=="FAULT")
+                    if "status" in m:
+                        assert(m["status"]=="FAULT")
                         # check who sent this message
-                        device = m["data"]["sender"]
+                        device = m["sender"]
                         # send a "RESUME" command to this device
                         logger.info("SIM_TIME:{} ENTITY:{} received a FAULT status from device {}".format(
                             self.env.now, self.name, device))
@@ -84,9 +85,9 @@ class App(object):
 
             # at time t=3, send a dummy control message 
             # to all the devices controlled by this app:
-            #if(self.env.now == 3):
-            #    for d in self.controlled_devices:
-            #        self.send_control_message(d, json.dumps({"sender": self.name, "command":"DUMMY_COMMAND"}))
+            if(self.env.now == 3):
+                for d in self.controlled_devices:
+                    self.send_control_message(d, json.dumps({"sender": self.name, "command":"DUMMY_COMMAND"}))
 
 
     def add_device_to_be_controlled(self,device_name):
@@ -94,8 +95,8 @@ class App(object):
         # controlled by this app over the middleware.
         # create a communication interface for this device:
         publish_thread = communication_interface.PublishInterface(
-            interface_name="control_thread_"+device_name, parent_entity_name=self.name, 
-            target_entity_name=device_name, stream="configure", apikey=self.apikey)
+            interface_name="control_thread_"+device_name, entity_name=self.name, 
+            apikey=self.apikey, exchange=str(device_name)+".configure", protocol=APP_PROTOCOL)
         self.controlled_devices[device_name] = publish_thread
 
     def send_control_message(self,device_name, msg):

@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # suppress debug messages from other modules used.
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("pika").setLevel(logging.WARNING)
 logging.getLogger("communication_interface").setLevel(logging.WARNING)
 
 
@@ -36,7 +37,7 @@ from fault_injector import FaultInjector
 
 # information (apikeys) of all registered entities are
 # stored in a file for easy re-use.
-CONFIG_MODULE = "simple_test_config"
+CONFIG_MODULE = "registration_info"
 CONFIG_FILE_NAME = CONFIG_MODULE+".py"
 
 
@@ -87,7 +88,7 @@ def print_time(env):
         if ( (elapsed_real_time - sim_time) >= float(PERIOD)):
             overshoot = elapsed_real_time - sim_time
             max_overshoot = max(overshoot, max_overshoot)
-            logger.warning("Simulation time overshot real-time by {} s. Max_overshoot so far was {} s.".format(overshoot,max_overshoot))
+            logger.warning("Simulation time overshot real-time by {:.3f}s. Max_overshoot so far was {:.3f}s.".format(overshoot,max_overshoot))
         yield env.timeout(PERIOD)
 
 
@@ -233,9 +234,9 @@ def cleanup_queued_messages(num_devices, num_apps, logging_level):
     # now clear the subscribe queue for each app
     for a in apps:
         apikey = registered_entities[a]
-        success,response = ideam_messaging.subscribe(self_id=a, stream=None, apikey=apikey, max_entries=100000)
+        success,messages = ideam_messaging.get(apikey=apikey, queue=str(a), max_entries=100000)
         if (success==True):
-            logger.debug("Cleaned up {} residual messages for app {}".format(len(response.json()), a))
+            logger.debug("Cleaned up {} residual messages for app {}".format(len(messages), a))
             
 
 

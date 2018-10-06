@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, '../messaging')
 import communication_interface
 
+DEV_PROTOCOL = "AMQP" # can be either "AMQP" or "HTTP"
 
 class Device(object):
     """ 
@@ -40,13 +41,13 @@ class Device(object):
         # set up communication interfaces
         #   publish interface:
         self.publish_thread = communication_interface.PublishInterface(
-            interface_name="publish_thread", parent_entity_name=self.name, 
-            target_entity_name=self.name, stream="protected", apikey=apikey)
+            interface_name="publish_thread", entity_name=name, 
+            apikey=apikey, exchange=str(name)+".protected", protocol=DEV_PROTOCOL)
         
         #   subscribe interface
         self.subscribe_thread = communication_interface.SubscribeInterface(
-            interface_name="subscribe_thread", parent_entity_name=self.name, 
-            target_entity_name=self.name, stream="configure", apikey=apikey)
+            interface_name="subscribe_thread", entity_name=name, 
+            apikey=apikey, exchange=str(name)+".configure", protocol=DEV_PROTOCOL)
             
         # some state variables
         self.state = "NORMAL"       # state of the device. ("NORMAL"/"FAULT")
@@ -92,8 +93,8 @@ class Device(object):
                         if msgs!=None:
                             self.received_messages.extend(msgs)
                             for m in msgs:
-                                if "command" in m["data"]:
-                                    if (m["data"]["command"]=="RESUME"):
+                                if "command" in m:
+                                    if (m["command"]=="RESUME"):
                                         self.resume_command_received=True
                                         logger.info("SIM_TIME:{} ENTITY:{} received a RESUME command".format(self.env.now, self.name))
                                      

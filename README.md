@@ -3,8 +3,10 @@
 At-scale testing of the ideam middleware using simulated entities.
 
 ## REQUIREMENTS ##
-* Python3 
-* SimPy (https://simpy.readthedocs.io/en/latest/) version > 3.0.10
+* Python3
+* HTTP Requests library for Python3
+* Pika for Python3 (python3-pika)
+* SimPy for Python3 (https://simpy.readthedocs.io/en/latest/) version > 3.0.10
 * IDEAM middleware (https://github.com/rbccps-iisc/ideam) installed on the local machine or a remote server
 
 ## USAGE ##
@@ -20,9 +22,15 @@ At-scale testing of the ideam middleware using simulated entities.
 ```
 * To run tests with simulated devices and apps running in a SimPy environment:
 ``` console
-	$ cd entities
+	$ cd simple_entities
 	$ python3 run_simple_test.py
 ```
+* To run the streetlight demo:
+``` console
+        $ cd streetlight_demo
+	$ python3 run_testbench.py
+```
+	
 ## AUTHOR ##
 	Neha Karanjkar (https://github.com/NehaKaranjkar)
 

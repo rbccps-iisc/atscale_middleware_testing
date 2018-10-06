@@ -60,7 +60,7 @@ class PublishInterface(CommunicationInterface):
         assert(protocol=="HTTP" or protocol == "AMQP")
         self.protocol = protocol # protocol to be used for the communication.
         if(protocol=="AMQP"):
-            self.amqp_channel = ideam_messaging.PublishChannel(self.entity_name, self.apikey, self.exchange)
+            self.amqp_channel = ideam_messaging.PublishChannel(entity_name, apikey, exchange)
         
         # spawn the behaviour function as an independent thread
         self.stop_event = threading.Event()
@@ -103,7 +103,7 @@ class SubscribeInterface(CommunicationInterface):
         assert(protocol=="HTTP" or protocol == "AMQP")
         self.protocol = protocol # protocol to be used for the communication.
         if(protocol=="AMQP"):
-            self.amqp_channel = ideam_messaging.SubscribeChannel(self.entity_name, self.apikey, self.exchange)
+            self.amqp_channel = ideam_messaging.SubscribeChannel(entity_name, apikey, exchange)
       
       # spwan the behaviour function as an independent thread
         self.polling_interval = 1 # time (in seconds) between subscribe requests

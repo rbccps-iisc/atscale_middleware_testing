@@ -28,36 +28,34 @@ class StateInjector(object):
         
         self.env = env
         
-        # a dictionary of device instaces
+        # a dictionary of streetlight device instaces
         # <device_name>: <device_pointer>
         self.device_instances = None
         
-        # create a plotter for visualization
+        # create a plot for visualization
         self.plot = None
         
-        # start a simpy process for the main behavior
+        # time period of the state injector
         self.period=1
-        self.behavior_process=self.env.process(self.behavior())
-
-        # model ambient light variation
-        self.num_values = 20 # total number of values to cycle through
-        self.ambient_light_values = list(np.linspace(0,1,self.num_values)) + list(np.linspace(1,0,self.num_values))
+        self.count=0 # variable to keep count of periods elapsed.
         
-        self.count=0 # starting value
-
-
+        # start a simpy process for the main behavior
+        self.behavior_process=self.env.process(self.behavior())
+     
+        # ambient light values to cycle-through:
+        self.ambient_light_values = list(np.linspace(0,1,10)) + list(np.linspace(1,0,10))
+        
         
     # main behavior:
     def behavior(self):
         
         N = len(self.device_instances)
         assert(N>0)
-
         intensities=[0 for i in range(N)]
         activities=[0 for i in range(N)]
         ambient_light = self.ambient_light_values[0]
         
-        # Initialize the plotter
+        # Initialize the plot
         plot = visualization.PlotStreetlights(N, intensities, activities, ambient_light)
         
         while(True):
@@ -67,13 +65,19 @@ class StateInjector(object):
             ambient_light = self.ambient_light_values[i]
             for d in self.device_instances:
                 self.device_instances[d].ambient_light_intensity=ambient_light
-
+             
             # inject activity
-            activities = [np.random.choice(a=[0,1],p=[0.8,0.2],replace=False)] + activities[:-1]
+            # generate a 0 or a 1 randomly
+            new_vehicle_arrived = np.random.choice(a=[0,1],p=[0.8,0.2],replace=False)
+            # rotate right the activity list
+            activities = [new_vehicle_arrived] + activities[:-1]
             for i,d in zip(range(N),self.device_instances):
                 if activities[i]==True:
                     self.device_instances[d].behavior_process.interrupt("activity_detected")
-            
+                
+            # inject fault in the first device at count=5
+            #if(self.count==5):
+             #   self.device_instances.values()[0].behavior_process.interrupt("power_outage_fault")
             
             # wait for period
             yield self.env.timeout(self.period)

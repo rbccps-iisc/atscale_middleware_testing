@@ -301,7 +301,9 @@ class SubscribeChannel(object):
         for i in range(max_entries):
             method, properties, body = self.channel.basic_get(queue)
             if method:
-                data.append(body)
+                # convert the message from byte format to a python dict
+                m = json.loads(body.decode('utf-8'))
+                data.append(m)
                 # send an 'ack'
                 self.channel.basic_ack(method.delivery_tag)
             else:

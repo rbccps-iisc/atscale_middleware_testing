@@ -18,9 +18,11 @@ import simpy.rt
 # logging
 import logging
 logger = logging.getLogger(__name__)
+
 # suppress debug messages from other modules used.
 logging.getLogger("requests").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("pika").setLevel(logging.WARNING)
 logging.getLogger("communication_interface").setLevel(logging.WARNING)
 
 
@@ -52,8 +54,8 @@ def do_setup(num_devices, num_apps, logging_level):
     
     print("Setting up registrations and permissions...")
     
-    devices = ["sl"+str(i) for i in range(num_devices)]
-    apps =  ["appsl"+str(i) for i in range(num_apps)]
+    devices = ["streetlight"+str(i) for i in range(num_devices)]
+    apps =  ["appstreetlight"+str(i) for i in range(num_apps)]
     system_description = {  "entities" : devices+apps,
                             "permissions" : [(a,d,"read-write") for a in apps for d in devices]
                         }
@@ -87,7 +89,7 @@ def print_time(env):
         if ( (elapsed_real_time - sim_time) >= float(PERIOD)):
             overshoot = elapsed_real_time - sim_time
             max_overshoot = max(overshoot, max_overshoot)
-            logger.warning("Simulation time overshot real-time by {} s. Max_overshoot so far was {} s.".format(overshoot,max_overshoot))
+            logger.warning("Simulation time overshot real-time by {:.3f}s. Max_overshoot so far was {:.3f}s.".format(overshoot,max_overshoot))
         yield env.timeout(PERIOD)
 
 
@@ -103,6 +105,8 @@ def run_simulation(num_devices, num_apps, simulation_time,logging_level):
     """
     # logging settings:
     logging.basicConfig(level=logging_level) 
+    logging.getLogger("app").setLevel(logging_level)
+    logging.getLogger("streetlight").setLevel(logging_level)
     
     # read the apikeys for pre-registered devices from file  
     import importlib
@@ -245,9 +249,9 @@ def cleanup_queued_messages(num_devices, num_apps, logging_level):
      # now clear the subscribe queue for each app
     for a in apps:
         apikey = registered_entities[a]
-        success,response = ideam_messaging.subscribe(self_id=a, stream=None, apikey=apikey, max_entries=100000)
+        success,messages = ideam_messaging.get(apikey=apikey, queue=str(a), max_entries=100000)
         if (success==True):
-            logger.debug("Cleaned up {} residual messages for app {}".format(len(response.json()), a))
+            logger.debug("Cleaned up {} residual messages for app {}".format(len(messages), a))
             
 
    

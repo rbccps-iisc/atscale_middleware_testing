@@ -6,8 +6,8 @@
 #    Periodically publish sensor data to the middleware.
 #    Periodically check for, and respond to commands from the middleware.
 #    Adjust the LED light intensity according to the ambient light level:
-#        When ambient light level >= 0.6 (day-time), turn OFF the light.
-#        When ambient light level < 0.6, turn ON the light
+#        When ambient light level >= 0.8 (day-time), turn OFF the light.
+#        When ambient light level < 0.8, turn ON the light
 #        and set brightness level to 0.2 (dim)
 #    Whenever the LED light is ON and the activity sensor detects an object
 #        Set brightness level to 1.
@@ -34,6 +34,7 @@ from math import inf
 # helper class for communication with the middleware
 sys.path.insert(0, '../messaging')
 import communication_interface
+DEV_PROTOCOL = "AMQP" # can be either "AMQP" or "HTTP"
 
 
 class Streetlight(object):
@@ -43,21 +44,23 @@ class Streetlight(object):
         self.env = env
         self.name = name # unique identifier for the device
         self.period = 1  # time interval (in seconds) for publishing sensor data
-       
-        # sensor values and state of the streetlight:
+        
+        # settings (constants) for the streetlight behavior
+        self.DIM_INTENSITY = 0.2            # intensity when light is dimmed
+        self.AMBIENT_LIGHT_THRESHOLD = 0.8  # threshold for turning on/off the led
+        self.AUTOMATIC_DIM_TIMEOUT = 2      # dim the light automatically after these many periods of inactivity
+     
+        # max number of messages to be published.
+        # set to inf to publish unlimited messages
+        self.max_published_messages = inf
+        
+        # variables to hold sensor values 
+        # and state of the streetlight
         self.ambient_light_intensity = 1
         self.led_light_intensity =0
         self.activity_detected=0
         self.led_light_ON=False
-
-        # settings for the behavior
-        self.DIM_INTENSITY = 0.25 # intensity when light is dimmed
-        self.AMBIENT_LIGHT_THRESHOLD = 0.8 # turn On the light when ambient light falls below this value
         
-        # max number of messages to be published.
-        # set to inf to publish unlimited messages
-        self.max_published_messages = inf
-
         # pointers to neighbouring streetlights 
         # for direct communication (stored as a python list)
         self.neighbouring_streetlights=None
@@ -65,13 +68,13 @@ class Streetlight(object):
         # set up communication interfaces
         #   publish interface:
         self.publish_thread = communication_interface.PublishInterface(
-            interface_name="publish_thread", parent_entity_name=self.name, 
-            target_entity_name=self.name, stream="protected", apikey=apikey)
+            interface_name="publish_thread", entity_name=name, 
+            apikey=apikey, exchange=str(name)+".protected", protocol=DEV_PROTOCOL) 
         
         #   subscribe interface
         self.subscribe_thread = communication_interface.SubscribeInterface(
-            interface_name="subscribe_thread", parent_entity_name=self.name, 
-            target_entity_name=self.name, stream="configure", apikey=apikey)
+            interface_name="subscribe_thread", entity_name=name, 
+            apikey=apikey, exchange=str(name)+".configure", protocol=DEV_PROTOCOL)
             
         # some state variables
         self.state = "NORMAL"       # state of the device. ("NORMAL"/"FAULT")
@@ -84,10 +87,8 @@ class Streetlight(object):
      
         # start a simpy process which models a countdown timer
         # for dimming the light automatically
-        self.automatically_dim_max_count = 2 # dim the light after these many periods of no activity
-        self.automatically_dim_count = self.automatically_dim_max_count # initialize the timer
+        self.automatically_dim_count = self.AUTOMATIC_DIM_TIMEOUT # initialize the timer
         self.dim_process=self.env.process(self.automatically_dim())
-        
         
         
     # main behavior of the device :
@@ -97,7 +98,7 @@ class Streetlight(object):
             try:
                 if self.state == "NORMAL":
                     
-                    # if the light was OFF but ambient light is low,
+                    # if the LED light was OFF but ambient light is low,
                     # turn ON the LED light
                     if(self.led_light_ON == False and self.ambient_light_intensity<self.AMBIENT_LIGHT_THRESHOLD):
                         self.led_light_ON = True
@@ -145,8 +146,7 @@ class Streetlight(object):
                                     if (m["data"]["command"]=="RESUME"):
                                         self.resume_command_received=True
                                         logger.info("SIM_TIME:{} ENTITY:{} received a RESUME command".format(self.env.now, self.name))
-                                     
-                                     
+                                        
                         # wait till the next clock cycle
                         yield self.env.timeout(self.period)
                     # resume command received.
@@ -179,9 +179,9 @@ class Streetlight(object):
                             for sl in self.neighbouring_streetlights:
                                 sl.behavior_process.interrupt("activity_detected_in_neighbourhood")
                             # publish a message to inform the middleware
-                            #self.activity_detected=True
-                            #self.publish_sensor_data()
-                            #self.activity_detected=False
+                            self.activity_detected=True
+                            self.publish_sensor_data()
+                            self.activity_detected=False
                  
                 elif(i.cause=="FAULT"):
                     # go into fault state.
@@ -193,7 +193,7 @@ class Streetlight(object):
     # is detected for a certain amount of time
     def reset_automatically_dim_timer(self):
         # reset timer
-        self.automatically_dim_count = self.automatically_dim_max_count
+        self.automatically_dim_count = self.AUTOMATIC_DIM_TIMEOUT
 
     
     # countdown timer for automatically dimming the light

@@ -79,9 +79,9 @@ class PlotStreetlights(object):
          
         # Indicate activity using a circle
         # for each object detected.
-        self.base_obj_radius=0.02
+        self.base_obj_radius=0.1/(N+1)
         for i in range(N):
-                obj = plt.Circle((x[i], y_object), 0.0*self.base_obj_radius, color='violet',alpha=1,zorder=5)
+                obj = plt.Circle((x[i], y_object), 0.0*self.base_obj_radius, color='blue',alpha=1,zorder=5)
                 ax.add_artist(obj)
                 self.objects.append(obj)
         fig.canvas.draw()
