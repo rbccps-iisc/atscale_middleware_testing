@@ -18,7 +18,8 @@ A smart streetlight adapts to changes in ambient light and presence/absence of a
 * an app that monitors the lights,
 * a _state injector_ module which injects state/sensor values/faults into streetlight devices at pre-determined times.
 This can be used to:
-  * inject activity into successive streetlights to model moving vehicles
+  * inject values into the activity sensors of successive streetlights to model moving vehicles
+  * inject identical values into the ambient light sensors of all streetlights to model common environmental conditions
   * inject faults into groups of streetlights to model power outages or sensor failures
   
 ## Streetlight Behavior:
@@ -37,9 +38,9 @@ This can be used to:
 dim the light again automatically (set brightness to 0.2).
 
 ## App Behavior:
-* Monitor the state of all streetlights by collecting sensor data from each light
+* Monitor the state of all streetlights by collecting sensor data from each light, and plot this data
 * If no messages are received from a particular streetlight for a certain amount of time, it is possible that there was a fault in the streetlight, for example, because of power failure. Mark this streetlight as _possibly faulty_.
-* For other kinds of faults (for example sensor failure) on the streetlight, the streetlight will publish a _failure_ message. Upon receiving such a message, mark the streetlight as faulty and send appropriate commands to the neighbouring streetlights to cover for the faulty streetlight.
+* For other kinds of faults (for example sensor failure) on the streetlight, the streetlight will publish a _failure_ message. Upon receiving such a message, mark the streetlight as faulty and send appropriate commands to the streetlight for recovery/restart.
 
 ## Behavior of the State Injector:
 * Periodically inject values for the ambient light sensor into each streetlights to model the passage of the day.

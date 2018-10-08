@@ -18,11 +18,18 @@ if __name__=='__main__':
     # Run simulation.
     # The number of devices and apps used in the simulation 
     # can be a subset of those registered.
-    run_simulation(num_devices=NUM_DEVICES, num_apps=NUM_APPS, simulation_time = 20, logging_level=logging.INFO)
-    
-    # cleanup queued messages
-    cleanup_queued_messages(num_devices=NUM_DEVICES, num_apps=NUM_APPS, logging_level=logging.DEBUG)
- 
-    # De-register all entities
-    do_deregistrations(logging_level=logging.DEBUG) 
+    try:
+        run_simulation(num_devices=NUM_DEVICES, num_apps=NUM_APPS, simulation_time = 200, logging_level=logging.INFO)
+        pass
+        
+    except:
+        print ("An exception occured")
+        raise
+        
+    finally:
+        # cleanup queued messages
+        cleanup_queued_messages(num_devices=NUM_DEVICES, num_apps=NUM_APPS, logging_level=logging.DEBUG)
+        
+        # De-register all entities
+        do_deregistrations(logging_level=logging.DEBUG) 
 

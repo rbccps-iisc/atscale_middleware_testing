@@ -17,6 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 import numpy as np
 import visualization
+from random import randint
 
 class StateInjector(object):
     """ 
@@ -53,11 +54,11 @@ class StateInjector(object):
         assert(N>0)
         intensities=[0 for i in range(N)]
         activities=[0 for i in range(N)]
+        faults=[0 for i in range(N)]
         ambient_light = self.ambient_light_values[0]
         
         # Initialize the plot
-        plot = visualization.PlotStreetlights(N, intensities, activities, ambient_light)
-        
+        plot = visualization.PlotStreetlights("Ground Truth", N)
         while(True):
             
             # inject sensor values for ambient light
@@ -72,19 +73,22 @@ class StateInjector(object):
             # rotate right the activity list
             activities = [new_vehicle_arrived] + activities[:-1]
             for i,d in zip(range(N),self.device_instances):
-                if activities[i]==True:
+                if activities[i]==1:
                     self.device_instances[d].behavior_process.interrupt("activity_detected")
                 
-            # inject fault in the first device at count=5
-            #if(self.count==5):
-             #   self.device_instances.values()[0].behavior_process.interrupt("power_outage_fault")
+            # at counts=10 
+            # inject a fault into a randomly chosen device
+            if(self.count == 10):
+                dev = randint(0,N-1)
+                list(self.device_instances.values())[dev].behavior_process.interrupt("power_outage_fault")
+                faults[dev]=1
             
             # wait for period
             yield self.env.timeout(self.period)
             
             # update visualization
             intensities = [ self.device_instances[d].led_light_intensity for d in self.device_instances]
-            plot.update_plot(intensities, activities, ambient_light)
+            plot.update_plot(intensities, activities, faults, ambient_light)
             
             # update count    
             self.count += 1

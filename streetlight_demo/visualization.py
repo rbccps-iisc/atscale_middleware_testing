@@ -12,7 +12,7 @@ import time
 
 class PlotStreetlights(object):
     
-    def __init__(self, N, intensities, activities, ambient_light_level):
+    def __init__(self, plot_name, N):
         """
         Initialize the plot and populate it with 
         N streetlight poles.
@@ -22,10 +22,15 @@ class PlotStreetlights(object):
         self.ax =None   
         self.lights=[]  # handles to circle plots for each light
         self.objects=[] # handles to circle plots representing objects
+        self.faults=[]  # handles to circle plots representing faults
+        
         
         # generate a canvas
         fig, ax = plt.subplots(figsize=(6,6))
         ax.set(xlim=(0,1),ylim=(0,1))
+
+        # Name the plot
+        ax.set_title(plot_name)
         
         plt.ion() # enable plot to be updated dynamically      
         
@@ -33,13 +38,15 @@ class PlotStreetlights(object):
         x = np.linspace(0.1,0.9,N) # x coordinates
         y_base = 0.2
         y_top  = y_base + 1.0/(N+1)
+        y_fault = y_top + 0.1
         
         # y-coordinate to plot activity
         # detected by the streetlight
         y_object = 0.15
         
-        # draw a horizontal line representing the street
+        # draw horizontal lines representing the street
         ax.add_line(Line2D([0,1], [y_base,y_base], color="sienna",linewidth=2,zorder=1))
+        ax.add_line(Line2D([0,1], [y_base/2,y_base/2], color="yellow",linewidth=2,zorder=1,linestyle="--"))
         
         # draw lines representing the light poles.
         for i in range(N):
@@ -54,11 +61,12 @@ class PlotStreetlights(object):
         # get background to match ambient light.
         # 0=> dark (night-time) and 1=> light (day-time)
         # bound the value between (0.0001, 0.999)
-        ambient_light_level = min(0.999, max(0.0001,ambient_light_level))
+        ambient_light_level = 0
         cmap = cm.get_cmap('bone')
         ax.set_facecolor(cmap(ambient_light_level))
         # insert text to indicate ambient light
         self.text=ax.text(0.5, 0.9, "ambient_light_level = {:.2f}".format(ambient_light_level), backgroundcolor="white",horizontalalignment='center')
+        
         
         # Now draw the light orbs according 
         # to the light intensities
@@ -68,26 +76,36 @@ class PlotStreetlights(object):
         theta1 = 270-60
         theta2 = 270+60
         for i in range(N):
-            circle1 = Wedge((x[i], y_top), intensities[i]* base_light_radius,     theta1=theta1, theta2=theta2, color='yellow',alpha=0.2,zorder=2)
-            circle2 = Wedge((x[i], y_top), intensities[i]* base_light_radius*0.5, theta1=theta1, theta2=theta2, color='yellow',alpha=0.5,zorder=3)
-            circle3 = Wedge((x[i], y_top), intensities[i]* base_light_radius*0.2, theta1=theta1, theta2=theta2, color='yellow',alpha=1,  zorder=4)
+            circle1 = Wedge((x[i], y_top), 0* base_light_radius,     theta1=theta1, theta2=theta2, color='yellow',alpha=0.2,zorder=2)
+            circle2 = Wedge((x[i], y_top), 0* base_light_radius*0.5, theta1=theta1, theta2=theta2, color='yellow',alpha=0.5,zorder=3)
+            circle3 = Wedge((x[i], y_top), 0* base_light_radius*0.2, theta1=theta1, theta2=theta2, color='yellow',alpha=1,  zorder=4)
             ax.add_artist(circle1)
             ax.add_artist(circle2)
             ax.add_artist(circle3)
             light = [circle1, circle2, circle3]
             self.lights.append(light)
          
-        # Indicate activity using a circle
-        # for each object detected.
-        self.base_obj_radius=0.1/(N+1)
+        # Indicate activity using circles for 
+        # each detected object
+        self.base_obj_radius=min( 0.1/(N+1), 0.03)
         for i in range(N):
                 obj = plt.Circle((x[i], y_object), 0.0*self.base_obj_radius, color='blue',alpha=1,zorder=5)
                 ax.add_artist(obj)
                 self.objects.append(obj)
+        
+        # Indicate faults using circles for 
+        # each detected object
+        self.base_fault_radius= min ( 0.2/(N+1), 0.03)
+        for i in range(N):
+                flt = plt.Circle((x[i], y_fault), 0.0*self.base_fault_radius, color='red',alpha=1,zorder=5)
+                ax.add_artist(flt)
+                self.faults.append(flt)
+     
+        # draw the plot
         fig.canvas.draw()
         plt.show()
     
-    def update_plot(self, intensities, activities, ambient_light_level):
+    def update_plot(self, intensities, activities, faults, ambient_light_level):
         
         """
         Update plot
@@ -114,10 +132,18 @@ class PlotStreetlights(object):
             
         # Update activity for each object detected.
         for i in range(self.N):
-                obj = self.objects[i]
-                # check that activity value is either 0 or 1
-                assert(activities[i]==0 or activities[i]==1)
-                obj.set_radius(activities[i]*self.base_obj_radius)
+            obj = self.objects[i]
+            # check that activity value is either 0 or 1
+            assert(activities[i]==0 or activities[i]==1)
+            obj.set_radius(activities[i]*self.base_obj_radius)
+        
+        # Update fault info for each streetlight
+        for i in range(self.N):
+            flt = self.faults[i]
+            # check that fault value is either 0 or 1
+            assert(faults[i]>=0 and faults[i]<=1)
+            flt.set_radius(faults[i]*self.base_fault_radius)
+        # show the updated plot
         self.fig.canvas.draw()
 
 if __name__=='__main__':
@@ -127,10 +153,13 @@ if __name__=='__main__':
     N = 5
     intensities=[0 for i in range (N)]
     activities=[0 for i in range(N)]
+    activities[0]=1
+    faults=[0 for i in range(N)]
     ambient_light_level = 1
 
+    
     # draw the first plot
-    P = PlotStreetlights(N, intensities, activities, ambient_light_level)
+    P = PlotStreetlights("Sample_plot",N)
     plt.show()
 
     # create an animation 
@@ -138,12 +167,14 @@ if __name__=='__main__':
     t_max=100
     for t in range(t_max):
         # wait for a while
-        time.sleep(0.025)
+        time.sleep(0.05)
         intensities = [t/t_max for i in range (N)]
-        activities = [0 for i in range(N)]
-        activities[t%N]=1
+        activities = activities[-1:] + activities[:-1]
         ambient_light_level = 1 - t/t_max
-        P.update_plot(intensities,activities,ambient_light_level)
+        # the last light is faulty
+        faults[-1]=1
+        intensities[-1]=0
+        P.update_plot(intensities,activities, faults, ambient_light_level)
 
     print("done")
     time.sleep(2)

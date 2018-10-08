@@ -30,6 +30,7 @@ import json
 import logging
 logger = logging.getLogger(__name__)
 from math import inf 
+from string import digits
 
 # helper class for communication with the middleware
 sys.path.insert(0, '../messaging')
@@ -43,6 +44,8 @@ class Streetlight(object):
         
         self.env = env
         self.name = name # unique identifier for the device
+        # id: unique integer (0 ..N) that identifies each streetlight 
+        self.id = ''.join(c for c in name if c in digits) 
         self.period = 1  # time interval (in seconds) for publishing sensor data
         
         # settings (constants) for the streetlight behavior
@@ -98,6 +101,7 @@ class Streetlight(object):
             try:
                 if self.state == "NORMAL":
                     
+                    
                     # if the LED light was OFF but ambient light is low,
                     # turn ON the LED light
                     if(self.led_light_ON == False and self.ambient_light_intensity<self.AMBIENT_LIGHT_THRESHOLD):
@@ -125,33 +129,20 @@ class Streetlight(object):
                         logger.debug("SIM_TIME:{} ENTITY:{} picked up {} message(s) and has collected {}"
                             "messages in total so far.".format(self.env.now, self.name, len(msgs), self.subscribed_count))
                     
+                    # reset the activity sensor
+                    self.activity_detected=0
+                    
                     # wait till the next clock cycle
                     yield self.env.timeout(self.period)
+                    
                  
                  
                  
                 elif self.state == "FAULT":
-                    logger.info("SIM_TIME:{} ENTITY:{} entered the FAULT state.".format(self.env.now, self.name))
-                    # send a "fault" status to the app
-                    self.publish_fault_information()
                     
-                    # keep waiting for a "resume" response from the app
-                    self.resume_command_received = False
-                    while(not self.resume_command_received):
-                        msgs = self.get_unread_messages()
-                        if msgs!=None:
-                            self.received_messages.extend(msgs)
-                            for m in msgs:
-                                if "command" in m["data"]:
-                                    if (m["data"]["command"]=="RESUME"):
-                                        self.resume_command_received=True
-                                        logger.info("SIM_TIME:{} ENTITY:{} received a RESUME command".format(self.env.now, self.name))
-                                        
-                        # wait till the next clock cycle
-                        yield self.env.timeout(self.period)
-                    # resume command received.
-                    # go back to normal state.
-                    self.state="NORMAL"
+                    # stay in the fault state permanently
+                    # and just be un-responsive.
+                    yield self.env.timeout(self.period)
                     
                 else:
                     assert(0),"Invalid device state"
@@ -164,29 +155,28 @@ class Streetlight(object):
                 # respond according to the type of the interrupt:
                 if(i.cause=="activity_detected" or i.cause=="activity_detected_in_neighbourhood"):
                     # check if the light should respond to this activity.
-                    # Don't do anything if its already daytime.
-                    if(self.ambient_light_intensity<self.AMBIENT_LIGHT_THRESHOLD):
-                        self.led_light_ON=True
+                    # Don't do anything if its already daytime or the light is OFF.
+                    if(self.led_light_ON and self.state=="NORMAL"):
                         # set brightness level to max
                         self.led_light_intensity=1
-                        
                         # set a timer, after which the light will be dimmed again
                         # if no activity is detected for a while.
                         self.reset_automatically_dim_timer()
                         
                         if(i.cause=="activity_detected"):
+                            self.activity_detected=1
                             # inform neighbouring N streetlights
                             for sl in self.neighbouring_streetlights:
                                 sl.behavior_process.interrupt("activity_detected_in_neighbourhood")
                             # publish a message to inform the middleware
-                            self.activity_detected=True
                             self.publish_sensor_data()
-                            self.activity_detected=False
                  
-                elif(i.cause=="FAULT"):
+                elif(i.cause=="power_outage_fault"):
                     # go into fault state.
                     self.led_light_ON=False
+                    self.led_light_intensity=0
                     self.state="FAULT"
+                    logger.info("SIM_TIME:{} ENTITY:{} entered the FAULT state.".format(self.env.now, self.name))
                 
 
     # automatically dim the light if no activity 
@@ -219,18 +209,25 @@ class Streetlight(object):
     
     # publish sensor data
     def publish_sensor_data(self):
-        data = {"sender":self.name,
-                "ambient_light_intensity":str(self.ambient_light_intensity),
-                "led_light_intensity":str(self.led_light_intensity),
-                "activity_detected":str(self.activity_detected)
+        data = {"sender_name":self.name,
+                "sender_id":self.id,
+                "ambient_light_intensity": self.ambient_light_intensity,
+                "led_light_intensity": self.led_light_intensity,
+                "activity_detected": self.activity_detected,
+                "operational_status":"OK",
+                "fault_info":"none"
                 }
         self.publish(json.dumps(data))
     
     # publish fault information
     def publish_fault_information(self):
-        data = {"sender":self.name,
-                "status":"FAULT",
-                "type":"unknown"
+        data = {"sender_name":self.name,
+                "sender_id":self.id,
+                "ambient_light_intensity":0,
+                "led_light_intensity":0,
+                "activity_detected":0,
+                "operational_status":"FAULT",
+                "fault_info":"sensor_failure"
                 }
         self.publish(json.dumps(data))
  
