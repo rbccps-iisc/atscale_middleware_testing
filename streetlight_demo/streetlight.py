@@ -129,12 +129,12 @@ class Streetlight(object):
                         logger.debug("SIM_TIME:{} ENTITY:{} picked up {} message(s) and has collected {}"
                             "messages in total so far.".format(self.env.now, self.name, len(msgs), self.subscribed_count))
                     
-                    # reset the activity sensor
-                    self.activity_detected=0
                     
                     # wait till the next clock cycle
                     yield self.env.timeout(self.period)
                     
+                    # reset the activity sensor
+                    self.activity_detected=0
                  
                  
                  
@@ -199,6 +199,8 @@ class Streetlight(object):
                     if(self.led_light_ON and self.led_light_intensity > self.DIM_INTENSITY):
                         self.led_light_intensity=self.DIM_INTENSITY
                         logger.debug("SIM_TIME:{} ENTITY:{} dimming the LED light".format(self.env.now, self.name))
+                        # publish sensor data to the middleware
+                        self.publish_sensor_data()
 
 
     # publish a message to the middleware

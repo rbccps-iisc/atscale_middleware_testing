@@ -9,7 +9,7 @@ from testbench import *
 if __name__=='__main__':
     
     # settings:
-    NUM_DEVICES = 4 # streetlights
+    NUM_DEVICES = 10 # streetlights
     NUM_APPS = 1    # apps
     
     # Register all entities and set up permissions in the middleware

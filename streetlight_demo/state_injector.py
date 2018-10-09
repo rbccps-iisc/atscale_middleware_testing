@@ -44,7 +44,7 @@ class StateInjector(object):
         self.behavior_process=self.env.process(self.behavior())
      
         # ambient light values to cycle-through:
-        self.ambient_light_values = list(np.linspace(0,1,10)) + list(np.linspace(1,0,10))
+        self.ambient_light_values = list(np.linspace(0,1,20)) + list(np.linspace(1,0,20))
         
         
     # main behavior:
@@ -76,9 +76,9 @@ class StateInjector(object):
                 if activities[i]==1:
                     self.device_instances[d].behavior_process.interrupt("activity_detected")
                 
-            # at counts=10 
+            # at counts=40 
             # inject a fault into a randomly chosen device
-            if(self.count == 10):
+            if(self.count == 40 or self.count==100):
                 dev = randint(0,N-1)
                 list(self.device_instances.values())[dev].behavior_process.interrupt("power_outage_fault")
                 faults[dev]=1

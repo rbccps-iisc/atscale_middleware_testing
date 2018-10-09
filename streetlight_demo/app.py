@@ -38,7 +38,7 @@ class App(object):
         self.env = env
         self.name = name
         self.apikey = apikey
-        self.period = 1 # operational clock period for the app (in seconds)
+        self.period = 0.5 # operational clock period for the app (in seconds)
         
         # create a communication interface
         # to get device data from the middleware
@@ -117,9 +117,10 @@ class App(object):
         # check if any device hasn't communicated in a long while.
         # if so, mark it as a potential fault
         for i in range(N):
-            if self.device_timestamp_last_msg[i] < (self.env.now-3):
+            if self.device_timestamp_last_msg[i] < (self.env.now-5):
                 self.device_faults[i]=1 # this light is probably faulty
                 self.device_led_light_intensity[i]=0
+                self.device_activity_detected[i]=0
             
         # update the plot for streetlight data  
         self.plot.update_plot(intensities=self.device_led_light_intensity, 

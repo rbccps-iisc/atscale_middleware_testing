@@ -72,10 +72,9 @@ class PublishInterface(CommunicationInterface):
     # function to stop the thread from outside
     def stop(self):
         self.stop_event.set()
-        if(self.protocol=="AMQP"):
-            self.amqp_channel.close()
         logger.info("thread {} stopped.".format(self.name))
-
+        
+    
     # check if the thread was stopped.
     def stopped(self):
         return self.stop_event.is_set()
@@ -92,6 +91,10 @@ class PublishInterface(CommunicationInterface):
             assert(success)
             logger.debug("thread {} published a message: {}".format(self.name, msg))
             self.message_count +=1
+        # the thread was stopped from outside.
+        # now close the communication channels.
+        if(self.protocol=="AMQP"):
+            self.amqp_channel.close()
 
 
 class SubscribeInterface(CommunicationInterface):
@@ -116,16 +119,14 @@ class SubscribeInterface(CommunicationInterface):
     # function to stop the thread from outside
     def stop(self):
         self.stop_event.set()
-        if(self.protocol=="AMQP"):
-            self.amqp_channel.close()
         logger.info("thread {} stopped.".format(self.name))
-
+        
     # check if the thread was stopped.
     def stopped(self):
         return self.stop_event.is_set()
     
     def behavior(self):
-
+        
         while not self.stop_event.wait(timeout=self.polling_interval):
             # subscribe from middleware
             if(self.protocol=="HTTP"):
@@ -143,7 +144,11 @@ class SubscribeInterface(CommunicationInterface):
                     self.queue.put(m)
                     self.message_count += 1
                     logger.debug("thread {} received a message: {}".format(self.name,m))
-
+                    
+        # the thread was stopped from outside.
+        # now close the communication channels.
+        if(self.protocol=="AMQP"):
+            self.amqp_channel.close()
 
 #------------------------------------
 # Testbench

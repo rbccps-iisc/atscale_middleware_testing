@@ -131,13 +131,13 @@ def run_simulation(num_devices, num_apps, simulation_time,logging_level):
         # create a SimPy Environment:
         # real-time, but without strict checking:
         env = simpy.rt.RealtimeEnvironment(factor=1, strict=False)
-
+        
         # as-fast-as-possible (non real-time):
         # env=simpy.Environment()
-
+        
         device_instances={}
         app_instances={}
-
+        
         # populate the environment with devices.
         for d in devices:
             name = d
@@ -159,27 +159,32 @@ def run_simulation(num_devices, num_apps, simulation_time,logging_level):
             perm = p[2] # permission
             if(perm=="write" or perm=="read-write"):
                 app_instances[a].add_device_to_be_controlled(d)
-
+        
         # Create a fault injector 
         # that injects faults into devices
         fault_inj = FaultInjector(env=env)
         fault_inj.device_instances = device_instances
-
+        
         # create a dummy simpy process that simply prints the
         # simulation time and real time.
         time_printer = env.process(print_time(env))
-
+        
         # run simulation for a specified amount of time
         assert(simulation_time > 0)
         assert(isinstance(simulation_time, int))
         print("Running simulation for",simulation_time,"seconds ....")
         env.run(simulation_time)
-
+        
+        # insert a delay here for all simulation
+        # to end before closing the threads.
+        print("Simulation ended. Closing all threads...")
+        time.sleep(1)
         # end all subscription threads on all entities
         for d in device_instances:
             device_instances[d].end()
         for a in app_instances:
             app_instances[a].end()
+        time.sleep(1)
 
     except:
         print("There was an exception")
