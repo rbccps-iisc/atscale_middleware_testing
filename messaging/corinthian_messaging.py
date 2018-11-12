@@ -1,7 +1,7 @@
 #!python3
 # 
 # Common routines for communicating with the 
-# IDEAM middleware using HTTP and AMQP protocols.
+# Corinthian middleware using HTTP and AMQP protocols.
 # The HTTP messaging uses Python's Requests library whereas
 # the AMQP messaging uses Python's Pika library.
 # 
@@ -26,16 +26,13 @@ logger = logging.getLogger(__name__)
 #=========================================
 
 # IP address of the middleware 
-IDEAM_ip_address = "localhost"
-
-# api version
-IDEAM_api = "1.0.0"
+CORINTHIAN_ip_address = "localhost"
 
 # url for sending http requests to the apigateway 
-IDEAM_base_url = "https://"+IDEAM_ip_address+":8443/api/"+IDEAM_api
+CORINTHIAN_base_url = "https://"+CORINTHIAN_ip_address+":8888"
 
 # port number for publish/get using AMQP
-IDEAM_port = 12082
+CORINTHIAN_port = 5672
 
 # disable SSL check warnings.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -60,7 +57,7 @@ def register(entity_id):
         True, <apikey> if success, else returns False,None.
     """
     assert(all(c.isdigit() or c.islower() for c in entity_id)), "Illegal entity_id for entity"
-    register_url = IDEAM_base_url+ "/register"
+    register_url = CORINTHIAN_base_url+ "/register"
     register_headers = {'apikey': 'guest', 'content-type':'application/json'}
     response = requests.post(url=register_url, headers=register_headers, data=streetlight_schema.get_data_from_schema(entity_id), verify=False)
     s = response.status_code
@@ -78,7 +75,7 @@ def deregister(entity_id):
     Returns:
         True if success, else returns False.
     """
-    deregister_url = IDEAM_base_url+ "/register"
+    deregister_url = CORINTHIAN_base_url+ "/register"
     deregister_headers = {'apikey': 'guest'}
     d = {"id":str(entity_id)}
     response = requests.delete(url=deregister_url, headers=deregister_headers, data = json.dumps(d), verify=False)
@@ -102,7 +99,7 @@ def follow(requestor_id, apikey, entity_id, permission):
     Returns:
         True if success, else returns False.
     """
-    follow_url = IDEAM_base_url +"/follow"
+    follow_url = CORINTHIAN_base_url +"/follow"
     follow_headers = {"Content-Type": "application/json", "apikey":str(apikey)}
     data = {"entityID": str(entity_id), "permission":permission, "validity": "10D", "requestorID":str(requestor_id)}
     response = requests.post(url=follow_url, headers=follow_headers, data=json.dumps(data), verify=False)
@@ -129,7 +126,7 @@ def share(entity_id, apikey, requestor_id, permission):
     Returns:
         True if success, else returns False.
     """
-    share_url = IDEAM_base_url +"/share"
+    share_url = CORINTHIAN_base_url +"/share"
     share_headers = {"Content-Type": "application/json", "apikey":str(apikey)}
     data = {"entityID": str(entity_id), "permission":permission, "validity": "10D", "requestorID":str(requestor_id)}
     response = requests.post(url=share_url, headers=share_headers, data=json.dumps(data), verify=False)
@@ -156,7 +153,7 @@ def bind(self_id, apikey, entity_id, stream):
     """
     if stream!=None:
         entity_id = str(entity_id)+"."+str(stream)
-    bind_url = IDEAM_base_url +"/bind"+"/"+str(self_id)+"/"+str(entity_id)
+    bind_url = CORINTHIAN_base_url +"/bind"+"/"+str(self_id)+"/"+str(entity_id)
     bind_headers = {"apikey":str(apikey),"routingKey":"#"}
     response = requests.get(url=bind_url, headers=bind_headers, verify=False)
     s = response.status_code
@@ -181,7 +178,7 @@ def publish(apikey, exchange, data):
     Returns:
         True if success, else returns False
     """
-    publish_url = IDEAM_base_url +"/publish/"+str(exchange)
+    publish_url = CORINTHIAN_base_url +"/publish/"+str(exchange)
     publish_headers = {"apikey":str(apikey)}
     response = requests.post(url=publish_url, headers=publish_headers, data=data, verify=False)
     s = response.status_code
@@ -203,7 +200,7 @@ def get(apikey, queue, max_entries):
         True, list of data entries if success, else returns False, None 
     """
     assert(isinstance(max_entries,int))
-    get_url = IDEAM_base_url +"/subscribe/"+str(queue)+"/"+str(max_entries)
+    get_url = CORINTHIAN_base_url +"/subscribe/"+str(queue)+"/"+str(max_entries)
     get_headers = {"apikey":str(apikey)}
     response = requests.get(url=get_url, headers=get_headers, verify=False)
     s = response.status_code
@@ -238,7 +235,7 @@ class PublishChannel(object):
         
         # open a channel
         credentials = pika.PlainCredentials(entity_id, apikey)
-        parameters = pika.ConnectionParameters(IDEAM_ip_address, IDEAM_port, '/', credentials)
+        parameters = pika.ConnectionParameters(CORINTHIAN_ip_address, CORINTHIAN_port, '/', credentials)
         connection = pika.BlockingConnection(parameters)
         self.channel = connection.channel()
 
@@ -280,7 +277,7 @@ class SubscribeChannel(object):
         self.queue=str(queue)
         # open a channel
         credentials = pika.PlainCredentials(entity_id, apikey)
-        parameters = pika.ConnectionParameters(IDEAM_ip_address, IDEAM_port, '/', credentials)
+        parameters = pika.ConnectionParameters(CORINTHIAN_ip_address, CORINTHIAN_port, '/', credentials)
         connection = pika.BlockingConnection(parameters)
         self.channel = connection.channel()
 

@@ -23,15 +23,19 @@ class PlotStreetlights(object):
         self.lights=[]  # handles to circle plots for each light
         self.objects=[] # handles to circle plots representing objects
         self.faults=[]  # handles to circle plots representing faults
+        self.count=0
+        self.plot_name=plot_name
         
         
         # generate a canvas
-        fig, ax = plt.subplots(figsize=(6,6))
+        fig, ax = plt.subplots(figsize=(3,4))
         ax.set(xlim=(0,1),ylim=(0,1))
 
         # Name the plot
         ax.set_title(plot_name)
-        
+        ax.set_yticklabels([])
+        ax.set_xticklabels([])
+
         plt.ion() # enable plot to be updated dynamically      
         
         # Coordinates of the lights and objects
@@ -145,6 +149,12 @@ class PlotStreetlights(object):
             flt.set_radius(faults[i]*self.base_fault_radius)
         # show the updated plot
         self.fig.canvas.draw()
+
+        # save a particular frame of the plot
+        self.count +=1 
+        if(self.count%3==0):
+            self.fig.savefig("fig{}{}".format(self.plot_name,self.count), format="pdf",dpi=1000)
+
 
 if __name__=='__main__':
     print("---------------------------------------")

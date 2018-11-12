@@ -56,6 +56,7 @@ class StateInjector(object):
         activities=[0 for i in range(N)]
         faults=[0 for i in range(N)]
         ambient_light = self.ambient_light_values[0]
+        activities[0]=True
         
         # Initialize the plot
         plot = visualization.PlotStreetlights("Ground Truth", N)
@@ -69,7 +70,8 @@ class StateInjector(object):
              
             # inject activity
             # generate a 0 or a 1 randomly
-            new_vehicle_arrived = np.random.choice(a=[0,1],p=[0.8,0.2],replace=False)
+            #new_vehicle_arrived = np.random.choice(a=[0,1],p=[0.8,0.2],replace=False)
+            new_vehicle_arrived = activities[-1]
             # rotate right the activity list
             activities = [new_vehicle_arrived] + activities[:-1]
             for i,d in zip(range(N),self.device_instances):

@@ -220,22 +220,26 @@ def app_subscribe(expected,app_keys, num_devices):
 
 
 def follow_dev(as_admin, permission,device_keys, app_keys):
-	if as_admin == True:
-		for app in app_keys:
-			for device in device_keys:
-				logger.info("FOLLOW REQUEST FROM APP " + app + " TO DEVICE " + device)
-				r = follow("admin", "admin", device, permission, from_id=app)
-				follow_status = check(r, 202)
-				assert (follow_status)
-
-	elif as_admin == False:
-		for app, apikey in app_keys.items():
-			for device in device_keys:
-				logger.info("FOLLOW REQUEST FROM APP " + app + " TO DEVICE " + device)
-				r = follow(app, apikey, device, permission)
-				follow_status = check(r, 202)
-				assert (follow_status)
-
+    if as_admin == True:
+        for app in app_keys:
+            for device in device_keys:
+                logger.info("FOLLOW REQUEST FROM APP " + app + " TO DEVICE " + device)
+                r = follow("admin", "admin", device, permission, from_id=app)
+                follow_status = check(r, 202)
+                if(not follow_status):
+                    print("Response=",r.json())
+                assert (follow_status)
+            
+    elif as_admin == False:
+        for app, apikey in app_keys.items():
+            for device in device_keys:
+                logger.info("FOLLOW REQUEST FROM APP " + app + " TO DEVICE " + device)
+                r = follow(app, apikey, device, permission)
+                follow_status = check(r, 202)
+                if(not follow_status):
+                    print("Response=",r.json())
+                assert (follow_status)
+    
 
 def share_dev(expected):
 
@@ -285,7 +289,7 @@ def dev_subscribe(expected):
     	logger.info("DEVICE " + device + " HAS RECEIVED " + str(expected) + " COMMAND MESSAGES")
 
 
-def setup_entities(num_devices, num_apps):
+def do_registrations(num_devices, num_apps):
     
     device_keys ={}
     app_keys={}
@@ -323,19 +327,26 @@ def setup_entities(num_devices, num_apps):
     with open("app_keys.py", 'w') as f:
         f.write('app_keys = ')
         json.dump(app_keys, f)
+
+def setup_permissions():
+    
+    from device_keys import device_keys
+    from app_keys import app_keys
     
     #Apps request follow with read-write permissions
     logger.info(colour.HEADER+"---------------> APPS REQUEST FOLLOW WITH READ-WRITE PERMISSIONS"+colour.ENDC)
     follow_dev(as_admin=False, permission="read-write",device_keys=device_keys,app_keys=app_keys)
+    time.sleep(1)
     
     #Devices approve issue share to apps
     logger.info(colour.HEADER+"---------------> DEVICES APPROVE READ-WRITE FOLLOW REQUESTS WITH SHARE"+colour.ENDC)
     share_dev(num_devices*num_apps*2)
+    time.sleep(1)
     
     # Apps bind to devices' queues
     logger.info(colour.HEADER + "---------------> APPS BIND TO DEVICES" + colour.ENDC)
     bind_unbind_dev(as_admin=False, req_type="bind", expected=(2*num_devices),device_keys=device_keys,app_keys=app_keys)
-    return device_keys, app_keys
+    time.sleep(1)
 
 def try_publish_subscribe(device_keys,app_keys):
     num_apps = len(app_keys)
@@ -380,9 +391,11 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     
-    # do registrations and setup permissions
-    device_keys, app_keys = setup_entities(num_devices=1, num_apps=1)
+    #do_registrations(num_devices=50000, num_apps=1)
+    
+    setup_permissions()
+
     # try publish/subscribe
-    try_publish_subscribe(device_keys,app_keys)
+    # try_publish_subscribe(device_keys,app_keys)
     # do de-registrations
-    do_deregistrations()
+    # do_deregistrations()

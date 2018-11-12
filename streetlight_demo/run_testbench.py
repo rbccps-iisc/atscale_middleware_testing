@@ -13,7 +13,7 @@ if __name__=='__main__':
     NUM_APPS = 1    # apps
     
     # Register all entities and set up permissions in the middleware
-    do_setup(num_devices=NUM_DEVICES, num_apps=NUM_APPS, logging_level=logging.DEBUG)
+    #do_setup(num_devices=NUM_DEVICES, num_apps=NUM_APPS, logging_level=logging.DEBUG)
  
     # Run simulation.
     # The number of devices and apps used in the simulation 
@@ -31,5 +31,5 @@ if __name__=='__main__':
         cleanup_queued_messages(num_devices=NUM_DEVICES, num_apps=NUM_APPS, logging_level=logging.DEBUG)
         
         # De-register all entities
-        do_deregistrations(logging_level=logging.DEBUG) 
+        #do_deregistrations(logging_level=logging.DEBUG) 
 
