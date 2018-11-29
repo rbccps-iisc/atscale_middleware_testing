@@ -1,34 +1,45 @@
 #!/usr/bin/env python
 
+import copy
 import json
 import math
 import argparse
 import random
 import string
 import argparse
+import hashlib
 import logging
 import time
+import sys
 import warnings
 import requests
 import urllib3
-import pickle
+import subprocess
 from requests.adapters import HTTPAdapter
+import multiprocessing as mp 
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 logger = logging.getLogger(__name__)
 
-base_url = "https://localhost:8888"
-s = requests.Session();
-s.mount('https://localhost:8888/', HTTPAdapter(pool_connections=1000))
+base_url = "https://localhost"
 
-class colour:
-	HEADER = '\033[95m'
-	OKBLUE = '\033[94m'
-	OKGREEN = '\033[92m'
-	WARNING = '\033[93m'
-	FAIL = '\033[91m'
-	ENDC = '\033[0m'
-	BOLD = '\033[1m'
-	UNDERLINE = '\033[4m'
+s = requests.Session();
+s.mount('https://localhost/', HTTPAdapter(pool_connections=1))
+
+output = mp.Queue()
+
+colour ={}
+
+colour['HEADER'] 		= '\033[95m'
+colour['BLUE'] 			= '\033[94m'
+colour['GREEN'] 		= '\033[92m'
+colour['WARNING'] 		= '\033[93m'
+colour['FAIL'] 			= '\033[91m'
+colour['ENDC'] 			= '\033[0m'
+colour['BOLD'] 			= '\033[1m'
+colour['UNDERLINE'] 		= '\033[4m'
+colour[''] 			= ''
 
 def check(response, code):
 	
@@ -391,11 +402,11 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     
-    #do_registrations(num_devices=50000, num_apps=1)
-    
+    # do registrations
+    do_registrations(num_devices=1, num_apps=1)
     setup_permissions()
-
+    
     # try publish/subscribe
-    # try_publish_subscribe(device_keys,app_keys)
+    try_publish_subscribe(device_keys,app_keys)
     # do de-registrations
-    # do_deregistrations()
+    do_deregistrations()
