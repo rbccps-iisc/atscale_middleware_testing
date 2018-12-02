@@ -131,9 +131,11 @@ def setup_entities(system_description):
 
             logger.debug("FOLLOW: follow request made by {} was approved.".format(requestor))
             
-            # get the requestor to bind to the target entity's protected stream
-            success = corinthian_messaging.bind_unbind("admin/"+requestor, requestor_apikey, "admin/"+target_entity, "#", "protected")
-            logger.debug("BIND: {} sent a bind request for {} .".format(requestor, target_entity))
+	    if permission == "read":
+		
+		# get the requestor to bind to the target entity's protected stream
+		success = corinthian_messaging.bind_unbind("admin/"+requestor, requestor_apikey, "admin/"+target_entity, "#", "protected")
+		logger.debug("BIND: {} sent a bind request for {} .".format(requestor, target_entity))
         
         logger.debug("SETUP: done. registered entities: {}".format(registered_entities))
         return True, registered_entities
@@ -163,8 +165,8 @@ if __name__=='__main__':
     apps = ["application"+str(i) for i in range (1)]
 
     system_description = {  "entities"       : devices+apps,
-                            "permissions"   : [ (a,d,"read") for a in apps for d in devices ]
+                            "permissions"   : [ (a,d,"read-write") for a in apps for d in devices ]
                         }
     
     success, registered_entities = setup_entities(system_description)
-    #deregister_entities(registered_entities)
+    deregister_entities(registered_entities)
