@@ -52,6 +52,7 @@ def deregister(entity_id):
 	headers = {"id": "admin", "apikey": admin_apikey, "entity": entity_id}
 	r = s.get(url=url, headers=headers, verify=False)
 	check(r,200)
+	return True
 
 def block_unblock(ID, apikey, entity_id, req_type):
 
@@ -81,6 +82,7 @@ def publish(ID, apikey, to, topic, message_type, data):
 	headers = {"id": ID, "apikey": apikey, "to": to, "subject": topic, "message-type": message_type, "content-type": "text/plain"}
 	r = s.post(url=url,headers=headers,data=data,verify=False)
 	check(r,202)
+	return True
 
 def follow(ID, apikey, to_id, permission, from_id="", topic ="", validity = "", message_type=""):
 
@@ -257,11 +259,14 @@ def run_test():
 		# De-register device1
 		print("DE-REGISTER: De-registering device1: ",end=''),
 		success = deregister("admin/device1")
-		print("success = ",success)
+		if(success):
+			print("success")
 		
 		# De-register application1
 		print("DE-REGISTER: De-registering application1: ",end=''),
 		success = deregister("admin/application1")
+		if(success):
+			print("success")
 
 if __name__=='__main__':
 	# set logging level to DEBUG

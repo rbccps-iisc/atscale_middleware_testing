@@ -14,7 +14,7 @@
 #                           "permissions"   : [ ("appX","dev1","read"),("appX","dev1","write"),("appY","dev2","read")]
 #                       }
 #
-# The routines returns True if there were no errors 
+# The routine returns True if there were no errors 
 # and also returns a python dictionary containing the names of 
 # the entities that were registered successfully and their corresponding apikeys.
 #

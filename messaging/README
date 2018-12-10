@@ -1,2 +1,2 @@
-Routines for communicating with the middleware using HTTPS/AMQP protocols.
+Routines for communicating with the corinthian middleware.
 
