@@ -225,26 +225,19 @@ if __name__=='__main__':
 	logging.getLogger("requests").setLevel(logging.WARNING)
 	logging.getLogger("urllib3").setLevel(logging.WARNING)
 	logging.getLogger("pika").setLevel(logging.WARNING)
+	logging.getLogger("setup_entities").setLevel(logging.INFO)
 	
 	devices = ["device1"]
 	apps =  ["application1"]
 	
-	system_description = {  "entities" : devices+apps,
+	system_description = {  "devices" : devices,
+							"apps": apps,
 	                        "permissions" : [(a,d,"read-write") for a in apps for d in devices]
 	                    }
 	registered_entities = []
 	 
 	# register a device and an app and set up permissions
-	try:
-		success, registered_entities = setup_entities.setup_entities(system_description)
-	except:
-		print("---------------------")
-		print("De-registering all entities")
-		entities=[ "admin/"+str(i) for i in devices] + ["admin/"+str(i) for i in apps]
-		setup_entities.deregister_entities(entities)
-		print("---------------------")
-		raise
-	assert(success)
+	success, registered_entities = setup_entities.register_entities(system_description)
 	
 	# create interface threads for device1 
 	p = PublishInterface("admin/device1",registered_entities["admin/device1"])
@@ -286,8 +279,6 @@ if __name__=='__main__':
 		s.stop()
 		sc.stop()
 		rc.stop()
-		print("---------------------")
 		print("De-registering all entities")
 		setup_entities.deregister_entities(registered_entities)
-		print("---------------------")
 
