@@ -40,7 +40,7 @@ def check(response, code):
 	+str(response.status_code)+"\n"+"Message = "+response.text
 
 def register(entity_id):
-	url = Corinthian_base_url + "/register"
+	url = Corinthian_base_url + "/owner/register-entity"
 	headers = {"id": "admin", "apikey": admin_apikey, "entity": entity_id, "is-autonomous": "true"}
 	r = s.post(url=url, headers=headers, data="{\"test\":\"schema\"}", verify=False)
 	check(r,201)
@@ -48,9 +48,9 @@ def register(entity_id):
 
 def deregister(entity_id):
 
-	url = Corinthian_base_url + "/deregister"
+	url = Corinthian_base_url + "/owner/deregister-entity"
 	headers = {"id": "admin", "apikey": admin_apikey, "entity": entity_id}
-	r = s.get(url=url, headers=headers, verify=False)
+	r = s.post(url=url, headers=headers, verify=False)
 	check(r,200)
 	return True
 
@@ -58,16 +58,16 @@ def block_unblock(ID, apikey, entity_id, req_type):
 
 	url = Corinthian_base_url 
 	if req_type == "block":
-		url = url + "/block"
+		url = url + "/owner/block"
 	elif req_type == "unblock":
-		url = url + "/unblock"
+		url = url + "/owner/unblock"
 	headers = {"id": ID, "apikey": apikey, "entity": entity_id}
-	r = s.get(url=url, headers=headers, verify=False)
+	r = s.post(url=url, headers=headers, verify=False)
 	check(r,200)
 
 def permissions(ID, apikey, entity_id=""):
 
-	url = Corinthian_base_url + "/permissions"
+	url = Corinthian_base_url + "/entity/permissions"
 	headers = {}
 	if entity_id:
 		headers['entity'] = entity_id
@@ -78,7 +78,7 @@ def permissions(ID, apikey, entity_id=""):
 
 def publish(ID, apikey, to, topic, message_type, data):
 
-	url = Corinthian_base_url + "/publish"
+	url = Corinthian_base_url + "/entity/publish"
 	headers = {"id": ID, "apikey": apikey, "to": to, "subject": topic, "message-type": message_type, "content-type": "text/plain"}
 	r = s.post(url=url,headers=headers,data=data,verify=False)
 	check(r,202)
@@ -86,7 +86,7 @@ def publish(ID, apikey, to, topic, message_type, data):
 
 def follow(ID, apikey, to_id, permission, from_id="", topic ="", validity = "", message_type=""):
 
-	url = Corinthian_base_url + "/follow"
+	url = Corinthian_base_url + "/entity/follow"
 	headers = {}
 	if from_id:
 		headers['from'] = from_id
@@ -106,20 +106,20 @@ def follow(ID, apikey, to_id, permission, from_id="", topic ="", validity = "", 
 		headers['message-type'] = message_type
 	headers['permission'] = permission
 	
-	r = s.get(url=url,headers=headers,verify=False)
+	r = s.post(url=url,headers=headers,verify=False)
 	check(r,202)
 	return r
 
 def reject_follow(ID, apikey, follow_id):
 
-	url = Corinthian_base_url + "/reject-follow"
+	url = Corinthian_base_url + "/entity/reject-follow"
 	headers = {"id": ID, "apikey": apikey, "follow-id": follow_id}
-	r = s.get(url=url, headers=headers, verify=False)
+	r = s.post(url=url, headers=headers, verify=False)
 	check(r,200)
 
 def unfollow(ID, apikey, to, topic, permission, message_type, from_id=""):
 
-	url = Corinthian_base_url + "/unfollow"
+	url = Corinthian_base_url + "/entity/unfollow"
 	headers = {}
 	if from_id:
 		headers['from'] = from_id
@@ -130,14 +130,14 @@ def unfollow(ID, apikey, to, topic, permission, message_type, from_id=""):
 	headers['permission'] = permission
 	headers['message-type'] = message_type 
 	
-	r = s.get(url=url,headers=headers,verify=False)
+	r = s.post(url=url,headers=headers,verify=False)
 	check(r,200)
 
 def share(ID, apikey, follow_id):
 
-	url = Corinthian_base_url + "/share"
+	url = Corinthian_base_url + "/entity/share"
 	headers = {"id": ID, "apikey": apikey, "follow-id": follow_id}
-	r = s.get(url=url, headers=headers, verify=False)
+	r = s.post(url=url, headers=headers, verify=False)
 	check(r,200)
 
 def bind_unbind(ID, apikey, to, topic, message_type, from_id="", is_priority="false", req_type="bind"):
@@ -146,9 +146,9 @@ def bind_unbind(ID, apikey, to, topic, message_type, from_id="", is_priority="fa
 	headers = {}
 
 	if req_type == "bind":
-		url = url + "/bind"
+		url = url + "/entity/bind"
 	elif req_type == "unbind":
-		url = url + "/unbind"
+		url = url + "/entity/unbind"
 
 	if from_id:
 		headers['from'] = from_id
@@ -159,12 +159,12 @@ def bind_unbind(ID, apikey, to, topic, message_type, from_id="", is_priority="fa
 	headers['to'] = to
 	headers['topic'] = topic
 	headers['is-priority'] = is_priority 
-	r = s.get(url=url, headers=headers, verify=False)
+	r = s.post(url=url, headers=headers, verify=False)
 	check(r,200)
 
 def subscribe(ID, apikey, message_type="", num_messages=""):
 
-	url = Corinthian_base_url + "/subscribe"
+	url = Corinthian_base_url + "/entity/subscribe"
 	headers = {}
 	if message_type:
 		headers['message-type'] = message_type
@@ -180,9 +180,9 @@ def follow_requests(ID, apikey, request_type):
 
 	url = Corinthian_base_url
 	if request_type == "requests":
-		url = url + "/follow-requests"
+		url = url + "/entity/follow-requests"
 	elif request_type == "status":
-		url = url + "/follow-status"
+		url = url + "/entity/follow-status"
 	headers = {"id": ID, "apikey": apikey}
 	r = s.get(url=url, headers=headers, verify=False)
 	check(r,200)
