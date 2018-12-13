@@ -37,7 +37,7 @@ class PublishInterface(object):
 		
 		# count of the messages published
 		self.count =0
-		
+
 		# spawn the behaviour function as an independent thread
 		self.stop_event = threading.Event()
 		self.thread = threading.Thread(target=self.behavior)
@@ -68,7 +68,6 @@ class PublishInterface(object):
 			corinthian_messaging.publish(self.ID, self.apikey, self.ID, "#", "protected", data)
 			logger.debug("PublishInterface thread with ID={} published data={}".format(self.ID, data))
 			self.count +=1
-		return
         
 
 
@@ -88,6 +87,7 @@ class SubscribeInterface(object):
 		
 		# count of the messages received
 		self.count =0
+		
 		
 		# spawn the behaviour function as an independent thread
 		self.stop_event = threading.Event()
@@ -130,6 +130,7 @@ class SendCommandsInterface(object):
 		
 		# count of the commands sent
 		self.count =0
+		
 		
 		# spawn the behaviour function as an independent thread
 		self.stop_event = threading.Event()
@@ -184,6 +185,7 @@ class ReceiveCommandsInterface(object):
 		# count of the messages received
 		self.count =0
 		
+		
 		# spawn the behaviour function as an independent thread
 		self.stop_event = threading.Event()
 		self.thread = threading.Thread(target=self.behavior)
@@ -211,74 +213,92 @@ class ReceiveCommandsInterface(object):
 				self.count += 1
 
 
-#------------------------------------
+#======================================
 # Testbench
-#------------------------------------
+#======================================
 import setup_entities
 import time
 
 if __name__=='__main__':
     
 	# logging settings:
-	logging.basicConfig(level=logging.INFO)
+	logging.basicConfig(level=logging.DEBUG)
 	# suppress debug messages from other modules used.
 	logging.getLogger("requests").setLevel(logging.WARNING)
 	logging.getLogger("urllib3").setLevel(logging.WARNING)
 	logging.getLogger("pika").setLevel(logging.WARNING)
+	logging.getLogger("corinthian_messaging").setLevel(logging.WARNING)
 	logging.getLogger("setup_entities").setLevel(logging.INFO)
 	
-	devices = ["device1"]
-	apps =  ["application1"]
+	devices = ["device1","device2"]
+	apps =  ["application1","application2"]
 	
 	system_description = {  "devices" : devices,
 							"apps": apps,
-	                        "permissions" : [(a,d,"read-write") for a in apps for d in devices]
+	                        #"permissions" : [(a,d,"read-write") for a in apps for d in devices]
+	                        "permissions" : [("application1","device1","read-write"), ("application2","device2","read-write")]
 	                    }
 	registered_entities = []
 	 
 	# register a device and an app and set up permissions
 	success, registered_entities = setup_entities.register_entities(system_description)
 	
-	# create interface threads for device1 
-	p = PublishInterface("admin/device1",registered_entities["admin/device1"])
-	rc = ReceiveCommandsInterface("admin/device1",registered_entities["admin/device1"])
+	# create interface threads for each device
+	p=[]  # publish threads
+	rc=[] # receive commands threads
+	s=[]  # subscribe threads
+	sc=[] # send command threads
 
-	# create interface threads for app1 
-	s = SubscribeInterface("admin/application1",registered_entities["admin/application1"])
-	sc = SendCommandsInterface("admin/application1",registered_entities["admin/application1"])
+	for d in devices:
+		p.append(PublishInterface("admin/"+d,registered_entities["admin/"+d]))
+		rc.append(ReceiveCommandsInterface("admin/"+d,registered_entities["admin/"+d]))
+
+	for a in apps:
+		s.append(SubscribeInterface("admin/"+a,registered_entities["admin/"+a]))
+		sc.append(SendCommandsInterface("admin/"+a,registered_entities["admin/"+a]))
 	
+	print("\n Running threads:")
+	for thread in threading.enumerate():
+		print(thread.name)
 	try:
-		# push something into the publish queue
+		# push something into the publish queues for each device
 		for i in range (10):
-			#p.publish(json.dumps({"value":str(i), "type":"A"}))
-			p.publish("DUMMY_DATA_"+str(i))
+			data = "DUMMY_DATA_"+str(i)
+			print("\nPublishing data:",data)
+			for j in range(len(devices)):
+				p[j].publish(data)
+			time.sleep(1)
 		
 		# push something into the commands queue
-		sc.send_command(device_id="admin/device1",command="DUMMY_COMMAND")
+		sc[0].send_command(device_id="admin/device1",command="DUMMY_COMMAND")
 	
 		# delay	
-		time.sleep(3)
+		time.sleep(5)
+	
+		for j in range(len(apps)):
+			# pull messages from the subscribe queues
+			print("\nThe following messages were present in the subscribe queue for ",apps[j])
+			while(not s[j].queue.empty()):
+				msg = s[j].queue.get()
+				print(msg)
 
-		# pull messages from the subscribe queues
-		print("\nThe following messages were present in the subscribe queue for application1:")
-		while(not s.queue.empty()):
-			msg = s.queue.get()
-			print(msg)
 		# pull messages from the device's commands queue
 		print("\nThe following messages were present in the commands queue for device1:")
-		while(not rc.queue.empty()):
-			msg = rc.queue.get()
+		while(not rc[0].queue.empty()):
+			msg = rc[0].queue.get()
 			print(msg)
 		print("\n")
 
 	except:
 		raise
 	finally:
-		#stop all child threads
-		p.stop()
-		s.stop()
-		sc.stop()
-		rc.stop()
+		for i in range(len(devices)):
+			#stop all child threads
+			p[i].stop()
+			rc[i].stop()
+		for j in range(len(apps)):
+			s[j].stop()
+			sc[j].stop()
 		print("De-registering all entities")
 		setup_entities.deregister_entities(registered_entities)
 

@@ -6,13 +6,13 @@
 
 # The system description consists of :
 #   1. a list of unique device names
-#	2. a list of unique app names
+#   2. a list of unique app names
 #   3. a list of permissions, where each permission is 
 #      specified as (<app name>, <device name>, <permission, which can be"read"/"write">)
 #
 # This information is to be given as a python dictionary. For example:
 #   system_description = {  "devices"       : [ "dev1", "dev2"],
-#							"apps"			: [ "appA", "appB"],
+#                           "apps"          : [ "appA", "appB"],
 #                           "permissions"   : [ ("appX","dev1","read"),("appX","dev1","write"),("appY","dev2","read")]
 #                       }
 #
@@ -44,23 +44,25 @@ def deregister_entities(list_of_entity_names):
 		logger.info("DE-REGISTER: de-registering {} successful.".format(entity))
 
 
+
 def register_entities(system_description, registration_info_file=None):
 	""" routine to register a bunch of entities 
 	and setup the required permissions between them.
 	
 	Arguments:
 	    system_description: a python dictionary containing a list of unique device names,
-						a list of unique app names and a list of permissions, where each permission is
+	                    a list of unique app names and a list of permissions, where each permission is
 	                    specified as (<app name>, <device name>, <permission>)
 	                    where permission can be"read"/"write"/"read-write".
 	                    
 	    For example:
 	    system_description = {  "devices"       : [ "dev1", "dev2"]
-								"apps"			: [ "appX", "appY"],
-	                           "permissions"   : [ ("appX","dev1","read"),("appX","dev1","write"),("appY","dev2","read")]
+	                            "apps"          : [ "appX", "appY"],
+	                           "permissions"    : [ ("appX","dev1","read"),("appX","dev1","write"),("appY","dev2","read")]
 	                       }
 	
-	    registration_info_file (optional): Registration information is saved in this file.
+	    registration_info_file (optional): File handle for an open file with
+	    write permission. If specified, registration information is saved into this file.
 	
 	 Return Values:
 	     The routines returns True if there were no errors 
@@ -68,12 +70,12 @@ def register_entities(system_description, registration_info_file=None):
 	     the entities that were registered successfully and their corresponding apikeys.
 	 """
 	registered_entities = {}
-	logger.info("SETUP: setting up entities and permissions from system description:{}".format(system_description))
+	logger.info("SETUP: setting up entities and permissions from system description.")
 	
 	try:
 	
 		devices = system_description["devices"]
-		apps	= system_description["apps"]
+		apps   = system_description["apps"]
 		entities = devices+apps
 		permissions = system_description["permissions"]
 		
@@ -144,25 +146,29 @@ def register_entities(system_description, registration_info_file=None):
 		logger.info("SETUP: done.")
 		# write out the registration info in a file.
 		if(registration_info_file):
-			logger.info("SETUP: writing info about registered entities into file")
+			logger.info("SETUP: writing info about registered entities into file {}.".format(registration_info_file.name))
 			devices = ["admin/"+str(i) for i in devices]
 			apps = ["admin/"+str(i) for i in apps]
-			registration_info_file.write("\nsystem_description= %s"%system_description)
 			registration_info_file.write("\ndevices= %s"%devices)
 			registration_info_file.write("\napps= %s"%apps)
+			registration_info_file.write("\npermissions= %s"%permissions)
 			registration_info_file.write("\nregistered_entities= %s"%registered_entities)
 		
 		return True, registered_entities
 	
 	except:
-		logger.error("An exception occurred during setup. Deregistering all entities.") 
+		logger.error("An exception occurred during setup. Deregistering all registered entities.") 
 		deregister_entities(registered_entities)
 		raise
 
 
 
 
+
+#=========================================
 # Testbench:
+#=========================================
+
 if __name__=='__main__':
     
 	# logging settings:
@@ -176,10 +182,10 @@ if __name__=='__main__':
 	
 	# register devices and apps and set up permissions
 	devices = ["device"+str(i) for i in range(2)]
-	apps = ["app"+str(i) for i in range (1)]
+	apps = ["application"+str(i) for i in range (1)]
 	
 	system_description = {  "devices"       : devices,
-							"apps"			: apps,
+	                        "apps"          : apps,
 	                        "permissions"   : [ (a,d,"read-write") for a in apps for d in devices ]
 	                    }
 	with open("registration_info.py", "w+") as f:
