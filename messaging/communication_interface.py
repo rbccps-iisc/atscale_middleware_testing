@@ -2,15 +2,20 @@
 #
 # Interface classes used by device/app entities
 # for performing non-blocking communication with the middleware.
-# There are four basic interfaces:
-#		PublishInterface: used by a device for publishing data
-#		SubscribeInterface: used by an app for receiving data
-#		SendCommandsInterface: used by an app for sending commands to devices
-#		ReceiveCommandsInterface: used by a device for receiving commands from an app
-#
 # A device/app entity can spawn multiple communication 
 # interfaces. Each interface runs as an independent thread. 
 # The threads communicate with the parent entity via queues.
+#
+# There are four basic interface types:
+#		
+#		1. PublishInterface: used by a device for publishing data
+#		2. SendCommandsInterface: used by an app for sending commands to devices
+#		3. SubscribeInterface: used by an app for receiving data
+#		4. ReceiveCommandsInterface: used by a device for receiving commands from an app
+#	
+#		For the Subscribe and ReceiveCommands interfaces, 
+#		two versions are available: POLLING and CALL-BACK.
+#		The CALL-BACK versions are more responsive and recommended.
 #
 # Author: Neha Karanjkar
 
@@ -21,9 +26,11 @@ from queue import Queue
 import json
 import logging
 logger = logging.getLogger(__name__)
+import pika
 
 # routines for communicating with the corinthian middleware
 import corinthian_messaging
+from corinthian_messaging import Corinthian_ip_address, Corinthian_port
 
 
 class PublishInterface(object):
@@ -70,24 +77,41 @@ class PublishInterface(object):
 			self.count +=1
         
 
-
 class SubscribeInterface(object):
-	""" Polling-based Interface used by an app for obtaining data from the middleware."""
-	
+	""" Interface used by an app for obtaining data 
+	from the middleware. Uses a call-back instead of polling.
+	The pika library calls a specified call-back function
+	whenever a message arrives for the consumer.
+	"""
+	# The call-back function
+	def callback(self, ch, method, properties, body):
+		self.count+=1
+		data = json.loads(body.decode('utf-8'))
+		sender = properties.user_id
+		logger.debug("SubscribeInterface thread with ID={} received a message: {} from {}".format(self.ID,data,sender))
+		msg={"data":data,"sender":sender}
+		# push the message into the queue
+		self.queue.put(msg)
+
 	def __init__(self, ID, apikey):
 		
 		self.ID = ID
 		self.apikey = apikey
 
-		# Polling interval in seconds
-		self.polling_interval=1
-		
 		# create a queue to communicate with the parent entity
 		self.queue = Queue()
 		
 		# count of the messages received
 		self.count =0
 		
+		# open a channel in pika
+		credentials = pika.PlainCredentials(self.ID, self.apikey)
+		parameters = pika.ConnectionParameters(Corinthian_ip_address, Corinthian_port, '/', credentials, ssl=True)
+		connection = pika.BlockingConnection(parameters)
+		self.channel = connection.channel()
+		
+		# register the call-back with middleware
+		self.channel.basic_consume(self.callback, queue=self.ID, no_ack=True)
 		
 		# spawn the behaviour function as an independent thread
 		self.stop_event = threading.Event()
@@ -99,22 +123,17 @@ class SubscribeInterface(object):
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
+		self.channel.stop_consuming()
 		logger.info("SubscribeInterface thread with ID={} was stopped.".format(self.ID))
 	    
 	# check if the thread was stopped.
 	def stopped(self):
 		return self.stop_event.is_set()
 		
-		
 	def behavior(self):
-		while not self.stop_event.wait(timeout=self.polling_interval):
-			messages = corinthian_messaging.subscribe(ID=self.ID, apikey=self.apikey,num_messages=100)
-			for m in messages.json():
-				logger.debug("SubscribeInterface thread with ID={} received a message: {}".format(self.ID, m))
-				# push the message into the queue
-				self.queue.put(m)
-				self.count += 1
-
+		if not self.stopped():
+			self.channel.start_consuming()
+		
 
 class SendCommandsInterface(object):
 	""" Interface used by an app for sending commands to a device via the middleware."""
@@ -166,9 +185,115 @@ class SendCommandsInterface(object):
 			corinthian_messaging.publish(ID=self.ID, apikey=self.apikey, to=device_id, topic="#", message_type="command", data=command)
 			logger.debug("SendCommandsInterface thread with ID={} sent a command={} to device={}".format(self.ID, command, device_id))
 			self.count +=1
-		return
 
 class ReceiveCommandsInterface(object):
+	""" Interface used by a device for receiving commands.
+	Uses a call-back instead of polling.
+	"""
+	# The call-back function
+	def callback(self, ch, method, properties, body):
+		self.count+=1
+		command = json.loads(body.decode('utf-8'))
+		sender = properties.user_id
+		logger.debug("ReceiveCommandsInterface thread with ID={} received a command {} from {}".format(self.ID, command, sender))
+		msg={"command":command,"sender":sender}
+		# push the message into the queue
+		self.queue.put(msg)
+
+	def __init__(self, ID, apikey):
+		
+		self.ID = ID
+		self.apikey = apikey
+
+		# create a queue to communicate with the parent entity
+		self.queue = Queue()
+		
+		# count of the messages received
+		self.count =0
+		
+		# open a channel in pika
+		credentials = pika.PlainCredentials(self.ID, self.apikey)
+		parameters = pika.ConnectionParameters(Corinthian_ip_address, Corinthian_port, '/', credentials, ssl=True)
+		connection = pika.BlockingConnection(parameters)
+		self.channel = connection.channel()
+		
+		# register the call-back with middleware
+		self.channel.basic_consume(self.callback, queue=self.ID+".command", no_ack=True)
+
+		
+		# spawn the behaviour function as an independent thread
+		self.stop_event = threading.Event()
+		self.thread = threading.Thread(target=self.behavior)
+		self.thread.daemon = True
+		self.thread.start()
+		logger.info("ReceiveCommandsInterface thread created with ID={}.".format(self.ID))
+		   
+	# a function to stop the thread from outside
+	def stop(self):
+		self.stop_event.set()
+		self.channel.stop_consuming()
+		logger.info("ReceiveCommandsInterface thread with ID={} was stopped.".format(self.ID))
+
+	# check if the thread was stopped.
+	def stopped(self):
+		return self.stop_event.is_set()
+		
+	def behavior(self):
+		if not self.stopped():
+			self.channel.start_consuming()
+
+#=============================
+# Polling-based interfaces...
+# these are less responsive than their
+# non-polling counterparts.
+#=================================
+
+class SubscribeInterfacePolling(object):
+	""" Polling-based Interface used by an app for obtaining data from the middleware."""
+	
+	def __init__(self, ID, apikey):
+		
+		self.ID = ID
+		self.apikey = apikey
+
+		# Polling interval in seconds
+		self.polling_interval=1
+		
+		# create a queue to communicate with the parent entity
+		self.queue = Queue()
+		
+		# count of the messages received
+		self.count =0
+		
+		# spawn the behaviour function as an independent thread
+		self.stop_event = threading.Event()
+		self.thread = threading.Thread(target=self.behavior)
+		self.thread.daemon = True
+		self.thread.start()
+		logger.info("SubscribeInterfacePolling thread created with ID={}.".format(self.ID))
+		   
+	# a function to stop the thread from outside
+	def stop(self):
+		self.stop_event.set()
+		logger.info("SubscribeInterfacePolling thread with ID={} was stopped.".format(self.ID))
+	    
+	# check if the thread was stopped.
+	def stopped(self):
+		return self.stop_event.is_set()
+		
+	def behavior(self):
+		while not self.stop_event.wait(timeout=self.polling_interval):
+			messages = corinthian_messaging.subscribe(ID=self.ID, apikey=self.apikey,num_messages=100)
+			for m in messages.json():
+				data = m["body"]
+				sender = m["sent-by"]
+				logger.debug("SubscribeInterfacePolling thread with ID={} received a message: {} from {}".format(self.ID,data,sender))
+				msg={"data":data,"sender":sender}
+				# push the message into the queue
+				self.queue.put(msg)
+				self.count += 1
+
+class ReceiveCommandsInterfacePolling(object):
 	""" Polling-based Interface used by a device for receiving commands."""
 	
 	def __init__(self, ID, apikey):
@@ -191,12 +316,12 @@ class ReceiveCommandsInterface(object):
 		self.thread = threading.Thread(target=self.behavior)
 		self.thread.daemon = True
 		self.thread.start()
-		logger.info("ReceiveCommandsInterface thread created with ID={}.".format(self.ID))
+		logger.info("ReceiveCommandsInterfacePolling thread created with ID={}.".format(self.ID))
 		   
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
-		logger.info("ReceiveCommandsInterface thread with ID={} was stopped.".format(self.ID))
+		logger.info("ReceiveCommandsInterfacePolling thread with ID={} was stopped.".format(self.ID))
 	    
 	# check if the thread was stopped.
 	def stopped(self):
@@ -207,10 +332,18 @@ class ReceiveCommandsInterface(object):
 		while not self.stop_event.wait(timeout=self.polling_interval):
 			messages = corinthian_messaging.subscribe(ID=self.ID, apikey=self.apikey, message_type="command",num_messages=100)
 			for m in messages.json():
-				logger.debug("ReceiveCommandsInterface thread with ID={} received a message: {}".format(self.ID, m))
-				# push the message into the queue
-				self.queue.put(m)
+				logger.debug("ReceiveCommandsInterfacePolling thread with ID={} received a command {}".format(self.ID, m))
+				command = m["body"]
+				sender = m["sent-by"]
+				logger.debug("ReceiveCommandsInterfacePolling thread with ID={} received a command {} from {}".format(self.ID, command, sender))
+
+				msg={"command":data,"sender":sender}
+				# push the command into the queue
+				self.queue.put(msg)
 				self.count += 1
+
+
+
 
 
 #======================================
@@ -230,13 +363,13 @@ if __name__=='__main__':
 	logging.getLogger("corinthian_messaging").setLevel(logging.WARNING)
 	logging.getLogger("setup_entities").setLevel(logging.INFO)
 	
-	devices = ["device1","device2"]
-	apps =  ["application1","application2"]
+
+	devices = ["device1"]
+	apps = ["app1"]
 	
 	system_description = {  "devices" : devices,
-							"apps": apps,
-	                        #"permissions" : [(a,d,"read-write") for a in apps for d in devices]
-	                        "permissions" : [("application1","device1","read-write"), ("application2","device2","read-write")]
+	                        "apps": apps,
+	                        "permissions" : [(a,d,"read-write") for a in apps for d in devices]
 	                    }
 	registered_entities = []
 	 
@@ -257,23 +390,25 @@ if __name__=='__main__':
 		s.append(SubscribeInterface("admin/"+a,registered_entities["admin/"+a]))
 		sc.append(SendCommandsInterface("admin/"+a,registered_entities["admin/"+a]))
 	
-	print("\n Running threads:")
-	for thread in threading.enumerate():
-		print(thread.name)
 	try:
-		# push something into the publish queues for each device
+		# push something into the publish and command queues for each device
 		for i in range (10):
-			data = "DUMMY_DATA_"+str(i)
+			data = json.dumps({"sensor_value":str(i),"type":"A"})
 			print("\nPublishing data:",data)
+			
+			# push something into the publish queue
 			for j in range(len(devices)):
 				p[j].publish(data)
+			
+			# push something into the commands queue
+			for a in range(len(apps)):
+				for d in range(len(devices)):
+					sc[a].send_command(device_id="admin/"+devices[d],command=json.dumps({"command":"DUMMY_COMMAND_"+str(i)}))
 			time.sleep(1)
 		
-		# push something into the commands queue
-		sc[0].send_command(device_id="admin/device1",command="DUMMY_COMMAND")
-	
-		# delay	
-		time.sleep(5)
+		
+		# delay
+		time.sleep(2)
 	
 		for j in range(len(apps)):
 			# pull messages from the subscribe queues
@@ -282,11 +417,12 @@ if __name__=='__main__':
 				msg = s[j].queue.get()
 				print(msg)
 
-		# pull messages from the device's commands queue
-		print("\nThe following messages were present in the commands queue for device1:")
-		while(not rc[0].queue.empty()):
-			msg = rc[0].queue.get()
-			print(msg)
+		# pull messages from the device's commands queues
+		for d in range(len(devices)):
+			print("\nThe following messages were present in the commands queue for ",devices[d])
+			while(not rc[d].queue.empty()):
+				msg = rc[d].queue.get()
+				print(msg)
 		print("\n")
 
 	except:

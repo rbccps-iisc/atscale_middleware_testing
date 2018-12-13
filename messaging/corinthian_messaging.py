@@ -22,7 +22,7 @@ Corinthian_ip_address = "localhost"
 Corinthian_base_url = "https://"+Corinthian_ip_address
 
 # port number for publish/get using AMQP
-Corinthian_port = 5672
+Corinthian_port = 5671
 
 # Admin apikey 
 # (read from a file named "admin.passwd" in the same folder as this script)
