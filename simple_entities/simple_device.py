@@ -48,8 +48,8 @@ class SimpleDevice(object):
 				#---------------------------
 				if self.state == "NORMAL":
 					# publish sensor data
-					self.publish_count+=1
 					data = json.dumps({"sensor_value": str(self.publish_count)})
+					self.publish_count+=1
 					self.publish_thread.publish(data)
 					logger.debug("SIM_TIME:{} ENTITY:{} published data {}".format(self.env.now, self.ID, data))
 
@@ -76,8 +76,8 @@ class SimpleDevice(object):
 							while (not self.receive_commands_thread.queue.empty()):
 								cmd = self.receive_commands_thread.queue.get()
 								logger.debug("SIM_TIME:{} ENTITY:{} received command {}.".format(self.env.now, self.ID, cmd))
-								assert("command" in cmd)
-								if (cmd["command"]=="RESUME"):
+								assert("command" in cmd["data"])
+								if (cmd["data"]["command"]=="RESUME"):
 									self.resume_command_received=True
 						# wait till the next clock cycle
 						yield self.env.timeout(self.period)

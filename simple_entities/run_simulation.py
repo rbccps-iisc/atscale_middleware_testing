@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # import the entity models.
 from simple_device import SimpleDevice
 from simple_app import SimpleApp
-#from simple_injector import SimpleInjector
+from simple_injector import SimpleInjector
 
 # a dummy SimPy process to print simulation time and real time
 def print_time(env):
@@ -28,7 +28,7 @@ def print_time(env):
     while True:
         elapsed_real_time = round(time.perf_counter() - start_real_time,2)
         sim_time = float(env.now)
-        logger.info("SIM_TIME:{} REAL_TIME:{}------------".format(sim_time, elapsed_real_time))
+        logger.info("SIM_TIME:{} REAL_TIME:{} =================".format(sim_time, elapsed_real_time))
         # check if the real-time overshot simulation time 
         # by more than <PERIOD> seconds.
         if ( (elapsed_real_time - sim_time) >= float(PERIOD)):
@@ -101,8 +101,8 @@ def run_simulation(registration_info_modulename, num_devices, num_apps, simulati
 		
 		# Create a fault injector 
 		# that injects faults into devices
-		# fault_inj = FaultInjector(env=env)
-		# fault_inj.device_instances = device_instances
+		injector = SimpleInjector(env=env,name="Injector")
+		injector.device_instances = device_instances
 		
 		# create a dummy simpy process that simply prints the
 		# simulation time and real time.
@@ -153,9 +153,9 @@ if __name__=='__main__':
 	
 	
 	# RUN SIMULATION
-	num_devices_to_simulate = 1
+	num_devices_to_simulate = 2
 	num_apps_to_simulate = 1
-	sim_time = 10
+	sim_time = 12
 	run_simulation(registration_info_modulename, num_devices_to_simulate, num_apps_to_simulate, sim_time)
 		
 	

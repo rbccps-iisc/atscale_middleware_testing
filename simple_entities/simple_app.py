@@ -25,7 +25,7 @@ class SimpleApp(object):
 		self.env = env
 		self.ID = ID         # unique identifier for the app
 		self.apikey = apikey # apikey required for authentication
-		self.period = 1      # operational period for the app (in seconds)
+		self.period = 0.5      # operational period for the app (in seconds)
 		
 		# interface for obtaining data published by devices:
 		self.subscribe_thread = communication_interface.SubscribeInterface(self.ID, self.apikey)
@@ -50,7 +50,17 @@ class SimpleApp(object):
 				while (not self.subscribe_thread.queue.empty()):
 					msg = self.subscribe_thread.queue.get()
 					logger.debug("SIM_TIME:{} ENTITY:{} received a message {}".format(self.env.now,self.ID, msg))
-					self.device_data.append(msg)
+					
+					if "status" in msg["data"]:
+						# check if any device reported a fault.
+						assert(msg["data"]["status"]=="FAULT")
+						# send a resume command to the device.
+						device_id = msg["sender"]
+						command = json.dumps({"command":"RESUME"})
+						self.send_commands_thread.send_command(device_id,command)
+					else:
+						# store the message
+						self.device_data.append(msg)
 			# now check again sometime later.
 			yield self.env.timeout(self.period)
 	
@@ -59,5 +69,5 @@ class SimpleApp(object):
 		self.subscribe_thread.stop()
 		self.send_commands_thread.stop()
 		logger.info("SIM_TIME:{} ENTITY:{} stopping.".format(self.env.now, self.ID))
-		logger.info("SIM_TIME:{} ENTITY:{} received the following messages:{}".format(self.env.now,self.ID, self.device_data))
+		logger.info("SIM_TIME:{} ENTITY:{} received {} messages in total".format(self.env.now,self.ID, len(self.device_data)))
 

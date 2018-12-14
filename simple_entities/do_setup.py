@@ -32,7 +32,7 @@ if __name__=='__main__':
 
 	
 	# system description:
-	NUM_DEVICES = 1 
+	NUM_DEVICES = 2 
 	NUM_APPS    = 1
 	devices = ["device"+str(i) for i in range(NUM_DEVICES)]
 	apps = ["app"+str(i) for i in range (NUM_APPS)]
