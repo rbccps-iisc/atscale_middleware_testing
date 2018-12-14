@@ -22,15 +22,13 @@ At-scale testing of the corinthian middleware using simulated entities.
 ```
 * To run tests with simulated devices and apps running in a SimPy environment:
 ``` console
-	$ cd entities
-	$ python3 run_simple_test.py
-```
-* To run the streetlight demo:
-``` console
-        $ cd streetlight_demo
-	$ python3 run_testbench.py
+	$ cd simple_entities
+	$ ./do_setup.py
+	$ ./run_simulation.py
 ```
 	
-## AUTHOR ##
-	Neha Karanjkar (https://github.com/NehaKaranjkar)
+## AUTHORS ##
+	Neha Karanjkar
+	Poorna Chandra Tejasvi
+
 

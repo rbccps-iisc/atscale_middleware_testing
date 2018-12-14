@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-# Script for running a SimPy simulation with simple_device and simple_app models.
+# Script for running a SimPy simulation with streetlight_device and streetlight_app models.
 #
 # Author: Neha Karanjkar
 
-import sys
 import simpy
 import simpy.rt
 import time
@@ -15,9 +14,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 # import the entity models.
-from simple_device import SimpleDevice
-from simple_app import SimpleApp
-from simple_injector import SimpleInjector
+from streetlight_device import StreetlightDevice
+from streetlight_app import StreetlightApp
+from streetlight_injector import StreetlightInjector
 
 # a dummy SimPy process to print simulation time and real time
 def print_time(env):
@@ -84,13 +83,13 @@ def run_simulation(registration_info_modulename, num_devices, num_apps, simulati
 		# populate the environment with devices.
 		for d in devices:
 		    apikey = registered_entities[d]
-		    device_instance = SimpleDevice(env=env,ID=d,apikey=apikey)
+		    device_instance = StreetlightDevice(env=env,ID=d,apikey=apikey)
 		    device_instances[d]=device_instance
 		
 		# populate the environment with apps.
 		for a in apps:
 		    apikey = registered_entities[a]
-		    app_instance = SimpleApp(env=env,ID=a,apikey=apikey)
+		    app_instance = StreetlightApp(env=env,ID=a,apikey=apikey)
 		    app_instances[a]=app_instance
 		
 		# for each app, provide a list of devices that it should control.
@@ -100,7 +99,7 @@ def run_simulation(registration_info_modulename, num_devices, num_apps, simulati
 		
 		# Create a fault injector 
 		# that injects faults into devices
-		injector = SimpleInjector(env=env,name="Injector")
+		injector = StreetlightInjector(env=env,name="FaultInjector")
 		injector.device_instances = device_instances
 		
 		# create a dummy simpy process that simply prints the
@@ -142,8 +141,8 @@ if __name__=='__main__':
 	logging.getLogger("pika").setLevel(logging.WARNING)
 	logging.getLogger("corinthian_messaging").setLevel(logging.WARNING)
 	logging.getLogger("communication_interface").setLevel(logging.INFO)
-	logging.getLogger("simple_device").setLevel(logging.DEBUG)
-	logging.getLogger("simple_app").setLevel(logging.DEBUG)
+	logging.getLogger("streetlight_device").setLevel(logging.DEBUG)
+	logging.getLogger("streetlight_app").setLevel(logging.DEBUG)
 
 	
 	# system description:
@@ -152,7 +151,7 @@ if __name__=='__main__':
 	
 	
 	# RUN SIMULATION
-	num_devices_to_simulate = 2
+	num_devices_to_simulate = 1
 	num_apps_to_simulate = 1
 	sim_time = 12
 	run_simulation(registration_info_modulename, num_devices_to_simulate, num_apps_to_simulate, sim_time)

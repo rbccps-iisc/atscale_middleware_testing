@@ -196,7 +196,7 @@ class ReceiveCommandsInterface(object):
 		command = json.loads(body.decode('utf-8'))
 		sender = properties.user_id
 		logger.debug("ReceiveCommandsInterface thread with ID={} received a command {} from {}".format(self.ID, command, sender))
-		msg={"command":command,"sender":sender}
+		msg={"data":command,"sender":sender}
 		# push the message into the queue
 		self.queue.put(msg)
 

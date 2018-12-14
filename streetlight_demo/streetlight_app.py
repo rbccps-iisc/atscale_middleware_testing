@@ -1,12 +1,13 @@
 #!python3
 
-# SimPy model for a simple app.
-# An app receives data published by devices 
-# and sends commands to devices via the middleware.
+# SimPy model for an app that controls streetlights.
 #
 # Author: Neha Karanjkar
 
-import sys
+from __future__ import print_function 
+import os, sys
+import threading
+from queue import Queue
 import simpy
 import json
 import logging
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, '../messaging')
 import communication_interface
 
-class SimpleApp(object):
+class StreetlightApp(object):
 	
 	def __init__(self, env, ID, apikey):
 		self.env = env

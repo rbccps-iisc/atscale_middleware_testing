@@ -1,12 +1,16 @@
 #!python3
 
 # SimPy model for an injector module.
-# The injector module injects faults into devices
-# at a predetermined time (via a SimPy interrupt).
+# The injector module injects sensor values and 
+# faults into devices at predetermined times
+# (via a SimPy interrupt).
 #
 # Author: Neha Karanjkar
 
-import sys
+from __future__ import print_function 
+import os, sys
+import threading
+from queue import Queue
 import simpy
 import json
 import logging
@@ -17,7 +21,7 @@ sys.path.insert(0, '../messaging')
 import communication_interface
 
 
-class SimpleInjector(object):
+class StreetlightInjector(object):
 	
 	def __init__(self, env, name):
 		self.env = env
