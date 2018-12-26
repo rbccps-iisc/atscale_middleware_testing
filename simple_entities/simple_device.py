@@ -38,7 +38,7 @@ class SimpleDevice(object):
 		
 	# main behavior of the device:
 	def behavior(self):
-		while (True): # the main loop.
+		while (self.publish_count<10): # the main loop.
 			try:
 				#---------------------------
 				# NORMAL STATE

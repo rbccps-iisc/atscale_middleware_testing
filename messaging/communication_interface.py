@@ -44,6 +44,12 @@ class PublishInterface(object):
 		
 		# count of the messages published
 		self.count =0
+	
+		# open a channel in pika
+		credentials = pika.PlainCredentials(self.ID, self.apikey)
+		parameters = pika.ConnectionParameters(Corinthian_ip_address, Corinthian_port, '/', credentials, ssl=True)
+		connection = pika.BlockingConnection(parameters)
+		self.channel = connection.channel()
 
 		# spawn the behaviour function as an independent thread
 		self.stop_event = threading.Event()
@@ -56,6 +62,7 @@ class PublishInterface(object):
 	def stop(self):
 		self.stop_event.set()
 		logger.info("PublishInterface thread with ID={} was stopped.".format(self.ID))
+		self.channel.close()
 	    
 	# check if the thread was stopped.
 	def stopped(self):
@@ -72,8 +79,13 @@ class PublishInterface(object):
 			# wait until there's a msg to be published
 			data = self.queue.get()
 			# send the message to the middleware
-			corinthian_messaging.publish(self.ID, self.apikey, self.ID, "#", "protected", data)
-			logger.debug("PublishInterface thread with ID={} published data={}".format(self.ID, data))
+			#corinthian_messaging.publish(self.ID, self.apikey, self.ID, "#", "protected", data)
+			success = self.channel.basic_publish(exchange=self.ID+".protected", properties=pika.BasicProperties(user_id=self.ID), 
+				routing_key="<unspecified>", body=str(data))
+			if success:
+				logger.debug("PublishInterface thread with ID={} published data={}".format(self.ID, data))
+			else:
+				logger.error("PublishInterface thread with ID={} FAILED to publish data={}".format(self.ID, data))
 			self.count +=1
         
 
@@ -150,6 +162,12 @@ class SendCommandsInterface(object):
 		# count of the commands sent
 		self.count =0
 		
+		# open a channel in pika
+		credentials = pika.PlainCredentials(self.ID, self.apikey)
+		parameters = pika.ConnectionParameters(Corinthian_ip_address, Corinthian_port, '/', credentials, ssl=True)
+		connection = pika.BlockingConnection(parameters)
+		self.channel = connection.channel()
+
 		
 		# spawn the behaviour function as an independent thread
 		self.stop_event = threading.Event()
@@ -162,6 +180,7 @@ class SendCommandsInterface(object):
 	def stop(self):
 		self.stop_event.set()
 		logger.info("SendCommandsInterface thread with ID={} was stopped.".format(self.ID))
+		self.channel.close()
 	    
 	# check if the thread was stopped.
 	def stopped(self):
@@ -182,8 +201,13 @@ class SendCommandsInterface(object):
 			command = cmd["command"]
 			
 			# send a command to the device via the middleware
-			corinthian_messaging.publish(ID=self.ID, apikey=self.apikey, to=device_id, topic="#", message_type="command", data=command)
-			logger.debug("SendCommandsInterface thread with ID={} sent a command={} to device={}".format(self.ID, command, device_id))
+			#corinthian_messaging.publish(ID=self.ID, apikey=self.apikey, to=device_id, topic="#", message_type="command", data=command)
+			success = self.channel.basic_publish(exchange=self.ID+".publish", properties=pika.BasicProperties(user_id=self.ID),
+				routing_key=device_id+".command.#", body=str(command))
+			if success:
+				logger.debug("SendCommandsInterface thread with ID={} sent a command={} to device={}".format(self.ID, command, device_id))
+			else:
+				logger.debug("SendCommandsInterface thread with ID={} FAILED to send a command={} to device={}".format(self.ID, command, device_id))
 			self.count +=1
 
 class ReceiveCommandsInterface(object):
