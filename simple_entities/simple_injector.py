@@ -38,8 +38,8 @@ class SimpleInjector(object):
 		yield self.env.timeout(5)
 		
 		#inject faults into all devices
-		assert len(self.device_instances)>0
-		for d in self.device_instances:
-			self.device_instances[d].behavior_process.interrupt("FAULT")
-			logger.info("SIM_TIME:{} SimpleInjector {} injected a fault into device {}".format(self.env.now, self.name, d))
+		#assert len(self.device_instances)>0
+		#for d in self.device_instances:
+		#	self.device_instances[d].behavior_process.interrupt("FAULT")
+		#	logger.info("SIM_TIME:{} SimpleInjector {} injected a fault into device {}".format(self.env.now, self.name, d))
 		# that's it.
