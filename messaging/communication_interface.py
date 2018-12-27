@@ -56,12 +56,12 @@ class PublishInterface(object):
 		self.thread = threading.Thread(target=self.behavior)
 		self.thread.daemon = True
 		self.thread.start()
-		logger.info("PublishInterface thread created with ID={}.".format(self.ID))
+		logger.debug("PublishInterface thread created with ID={}.".format(self.ID))
 
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
-		logger.info("PublishInterface thread with ID={} was stopped.".format(self.ID))
+		logger.debug("PublishInterface thread with ID={} was stopped.".format(self.ID))
 		self.channel.close()
 	    
 	# check if the thread was stopped.
@@ -130,13 +130,13 @@ class SubscribeInterface(object):
 		self.thread = threading.Thread(target=self.behavior)
 		self.thread.daemon = True
 		self.thread.start()
-		logger.info("SubscribeInterface thread created with ID={}.".format(self.ID))
+		logger.debug("SubscribeInterface thread created with ID={}.".format(self.ID))
 		   
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
 		self.channel.stop_consuming()
-		logger.info("SubscribeInterface thread with ID={} was stopped.".format(self.ID))
+		logger.debug("SubscribeInterface thread with ID={} was stopped.".format(self.ID))
 	    
 	# check if the thread was stopped.
 	def stopped(self):
@@ -174,12 +174,12 @@ class SendCommandsInterface(object):
 		self.thread = threading.Thread(target=self.behavior)
 		self.thread.daemon = True
 		self.thread.start()
-		logger.info("SendCommandsInterface thread created with ID={}.".format(self.ID))
+		logger.debug("SendCommandsInterface thread created with ID={}.".format(self.ID))
 
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
-		logger.info("SendCommandsInterface thread with ID={} was stopped.".format(self.ID))
+		logger.debug("SendCommandsInterface thread with ID={} was stopped.".format(self.ID))
 		self.channel.close()
 	    
 	# check if the thread was stopped.
@@ -250,13 +250,13 @@ class ReceiveCommandsInterface(object):
 		self.thread = threading.Thread(target=self.behavior)
 		self.thread.daemon = True
 		self.thread.start()
-		logger.info("ReceiveCommandsInterface thread created with ID={}.".format(self.ID))
+		logger.debug("ReceiveCommandsInterface thread created with ID={}.".format(self.ID))
 		   
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
 		self.channel.stop_consuming()
-		logger.info("ReceiveCommandsInterface thread with ID={} was stopped.".format(self.ID))
+		logger.debug("ReceiveCommandsInterface thread with ID={} was stopped.".format(self.ID))
 
 	# check if the thread was stopped.
 	def stopped(self):
@@ -294,12 +294,12 @@ class SubscribeInterfacePolling(object):
 		self.thread = threading.Thread(target=self.behavior)
 		self.thread.daemon = True
 		self.thread.start()
-		logger.info("SubscribeInterfacePolling thread created with ID={}.".format(self.ID))
+		logger.debug("SubscribeInterfacePolling thread created with ID={}.".format(self.ID))
 		   
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
-		logger.info("SubscribeInterfacePolling thread with ID={} was stopped.".format(self.ID))
+		logger.debug("SubscribeInterfacePolling thread with ID={} was stopped.".format(self.ID))
 	    
 	# check if the thread was stopped.
 	def stopped(self):
@@ -340,12 +340,12 @@ class ReceiveCommandsInterfacePolling(object):
 		self.thread = threading.Thread(target=self.behavior)
 		self.thread.daemon = True
 		self.thread.start()
-		logger.info("ReceiveCommandsInterfacePolling thread created with ID={}.".format(self.ID))
+		logger.debug("ReceiveCommandsInterfacePolling thread created with ID={}.".format(self.ID))
 		   
 	# a function to stop the thread from outside
 	def stop(self):
 		self.stop_event.set()
-		logger.info("ReceiveCommandsInterfacePolling thread with ID={} was stopped.".format(self.ID))
+		logger.debug("ReceiveCommandsInterfacePolling thread with ID={} was stopped.".format(self.ID))
 	    
 	# check if the thread was stopped.
 	def stopped(self):

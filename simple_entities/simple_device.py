@@ -63,7 +63,7 @@ class SimpleDevice(object):
 				# FAULT STATE
 				#---------------------------
 				elif self.state == "FAULT":
-					logger.info("SIM_TIME:{} ENTITY:{} entered the FAULT state.".format(self.env.now, self.ID))
+					logger.debug("SIM_TIME:{} ENTITY:{} entered the FAULT state.".format(self.env.now, self.ID))
 					# send a "fault" status to the app
 					self.publish_thread.publish(json.dumps({"status":"FAULT"}))
 					# keep waiting for a "resume" response from the app
@@ -88,7 +88,7 @@ class SimpleDevice(object):
 			except simpy.Interrupt as i:
 				# a simpy interrupt occured.
 				# check that this was a fault injected.
-				logger.info("SIM_TIME:{} ENTITY:{} was interrupted because of {}".format(self.env.now, self.ID,i.cause))
+				logger.debug("SIM_TIME:{} ENTITY:{} was interrupted because of {}".format(self.env.now, self.ID,i.cause))
 				
 				# go into fault state.
 				if i.cause=="FAULT":
@@ -98,4 +98,4 @@ class SimpleDevice(object):
 	def end(self):
 		self.publish_thread.stop()
 		self.receive_commands_thread.stop()
-		logger.info("SIM_TIME:{} ENTITY:{} stopping.".format(self.env.now, self.ID))
+		logger.debug("SIM_TIME:{} ENTITY:{} stopping.".format(self.env.now, self.ID))

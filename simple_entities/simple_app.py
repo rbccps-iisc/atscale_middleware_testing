@@ -34,6 +34,7 @@ class SimpleApp(object):
 		self.controlled_devices=[]
 		    
 		# data collected by the app
+		self.total_msg_count=0
 		self.device_data=[]
 		
 		# start a simpy process for the main app behavior
@@ -44,8 +45,10 @@ class SimpleApp(object):
 		while True:
 			#receive data published by devices
 			if not self.subscribe_thread.queue.empty():
+				msg_count=0
 				while (not self.subscribe_thread.queue.empty()):
 					msg = self.subscribe_thread.queue.get()
+					msg_count+=1
 					logger.debug("SIM_TIME:{} ENTITY:{} received a message {}".format(self.env.now,self.ID, msg))
 					
 					if "status" in msg["data"]:
@@ -58,6 +61,9 @@ class SimpleApp(object):
 					else:
 						# store the message
 						self.device_data.append(msg)
+				self.total_msg_count += msg_count
+				logger.info("SIM_TIME:{} ENTITY:{} received {} messages, and {} messages in total.".format(self.env.now,
+						self.ID, msg_count, self.total_msg_count))
 			# now check again sometime later.
 			yield self.env.timeout(self.period)
 	
@@ -65,6 +71,6 @@ class SimpleApp(object):
 	def end(self):
 		self.subscribe_thread.stop()
 		self.send_commands_thread.stop()
-		logger.info("SIM_TIME:{} ENTITY:{} stopping.".format(self.env.now, self.ID))
+		logger.debug("SIM_TIME:{} ENTITY:{} stopping.".format(self.env.now, self.ID))
 		logger.info("SIM_TIME:{} ENTITY:{} received {} messages in total".format(self.env.now,self.ID, len(self.device_data)))
 

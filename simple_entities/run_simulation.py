@@ -106,7 +106,15 @@ def run_simulation(registration_info_modulename, num_devices, num_apps, simulati
 		# create a dummy simpy process that simply prints the
 		# simulation time and real time.
 		time_printer = env.process(print_time(env))
-		
+	
+		# sync simpy's internal real-time with the 
+		# wall clock time.
+		#(This is necessary because quite a lot of time 
+		# could have elapsed between the creation of the env object and calling
+		# the run() method on it.)
+		env.sync()
+
+
 		# run simulation for a specified amount of time
 		assert(simulation_time > 0)
 		assert(isinstance(simulation_time, int))
@@ -142,8 +150,8 @@ if __name__=='__main__':
 	logging.getLogger("pika").setLevel(logging.WARNING)
 	logging.getLogger("corinthian_messaging").setLevel(logging.WARNING)
 	logging.getLogger("communication_interface").setLevel(logging.INFO)
-	logging.getLogger("simple_device").setLevel(logging.DEBUG)
-	logging.getLogger("simple_app").setLevel(logging.DEBUG)
+	logging.getLogger("simple_device").setLevel(logging.INFO)
+	logging.getLogger("simple_app").setLevel(logging.INFO)
 
 	
 	# system description:
